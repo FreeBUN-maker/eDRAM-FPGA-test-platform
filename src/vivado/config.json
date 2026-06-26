@@ -1,0 +1,713 @@
+{
+  "schema": "vivado-config-json/v1",
+  "project": {
+    "name": "edram_fpga_test_platform",
+    "part": "xczu5ev-sfvc784-1-i",
+    "top": "edram_pl_board_top",
+    "default_library": "xil_defaultlib",
+    "target_language": "SystemVerilog",
+    "part_source": "prompt.md"
+  },
+  "board": {
+    "name": "AXU5EVB-E",
+    "manual_revision_note": "Manual text identifies the board device as XCZU5EV-2SFVC784I; project part follows prompt.md.",
+    "manual_references": [
+      {
+        "page": 21,
+        "description": "PL differential 200 MHz clock source: PL_CLK0_P AE5, PL_CLK0_N AF5"
+      },
+      {
+        "page": 40,
+        "description": "PL USB-UART pins: PL_UART_TX AH12, PL_UART_RX AH11"
+      },
+      {
+        "page": 41,
+        "description": "J15/J16 40-pin expansion connectors provide 34 IO each at 3.3 V"
+      },
+      {
+        "page": 48,
+        "description": "PL_KEY1 is active-low and maps to AF12"
+      }
+    ]
+  },
+  "sources": [
+    "src/rtl/edram_pkg.sv",
+    "src/rtl/uart_baud_gen.sv",
+    "src/rtl/uart_rx.sv",
+    "src/rtl/uart_tx.sv",
+    "src/rtl/uart_frame_parser.sv",
+    "src/rtl/uart_resp_encoder.sv",
+    "src/rtl/cmd_dispatcher.sv",
+    "src/rtl/edram_ctrl_fsm.sv",
+    "src/rtl/edram_pl_top.sv",
+    "src/rtl/pl_clk_diff_to_single.sv",
+    "src/rtl/edram_pl_board_top.sv"
+  ],
+  "parameters": {
+    "INPUT_CLK_HZ": {
+      "value": 200000000,
+      "source": "AXU5EVB-E manual page 21 PL_CLK0 200 MHz differential source"
+    },
+    "CLK_HZ": {
+      "value": 100000000,
+      "source": "Generated single-ended core clock from pl_clk_diff_to_single default MMCM parameters",
+      "status": "derived"
+    },
+    "CLKFBOUT_MULT_F": {
+      "value": 5.0,
+      "source": "pl_clk_diff_to_single default MMCM feedback multiplier"
+    },
+    "DIVCLK_DIVIDE": {
+      "value": 1,
+      "source": "pl_clk_diff_to_single default MMCM input divider"
+    },
+    "CLKOUT0_DIVIDE_F": {
+      "value": 10.0,
+      "source": "pl_clk_diff_to_single default MMCM output divider"
+    },
+    "UART_BAUD": {
+      "value": 115200,
+      "source": "doc/FPGA-PC-UART-interface.md"
+    }
+  },
+  "clocks": [
+    {
+      "name": "pl_clk0",
+      "type": "differential_input",
+      "ports": {
+        "positive": "pl_clk0_p_i",
+        "negative": "pl_clk0_n_i"
+      },
+      "frequency_hz": 200000000,
+      "period_ns": 5.0,
+      "package_pins": {
+        "positive": "AE5",
+        "negative": "AF5"
+      },
+      "iostandard": "LVDS",
+      "status": "confirmed",
+      "board_source": {
+        "type": "differential",
+        "manual_page": 21,
+        "positive": {
+          "signal": "PL_CLK0_P",
+          "package_pin": "AE5"
+        },
+        "negative": {
+          "signal": "PL_CLK0_N",
+          "package_pin": "AF5"
+        }
+      },
+      "generated_clock": {
+        "name": "core_clk",
+        "module": "pl_clk_diff_to_single",
+        "frequency_hz": 100000000,
+        "period_ns": 10.0,
+        "mmcm": {
+          "clkfbout_mult_f": 5.0,
+          "divclk_divide": 1,
+          "clkout0_divide_f": 10.0
+        }
+      }
+    }
+  ],
+  "pin_mapping": {
+    "default_iostandard": "LVCMOS33",
+    "edram_policy": "Map eDRAM output controls and address/data buses to J16 pins 3-32 in top-level signal order; map edram_p_i[7:0] to J15 pins 3-10.",
+    "uart_policy": "Use the dedicated PL USB-UART signals from AXU5EVB-E manual page 40.",
+    "reset_policy": "Use PL_KEY1 from AXU5EVB-E manual page 48 as the active-low top-level reset input."
+  },
+  "ports": [
+    {
+      "name": "pl_clk0_p_i",
+      "direction": "in",
+      "width": 1,
+      "role": "clock_positive",
+      "iostandard": "LVDS",
+      "package_pin": "AE5",
+      "xdc_ports": [
+        "pl_clk0_p_i"
+      ],
+      "package_pin_status": "confirmed",
+      "board_signal": "PL_CLK0_P",
+      "manual_page": 21
+    },
+    {
+      "name": "pl_clk0_n_i",
+      "direction": "in",
+      "width": 1,
+      "role": "clock_negative",
+      "iostandard": "LVDS",
+      "package_pin": "AF5",
+      "xdc_ports": [
+        "pl_clk0_n_i"
+      ],
+      "package_pin_status": "confirmed",
+      "board_signal": "PL_CLK0_N",
+      "manual_page": 21
+    },
+    {
+      "name": "rst_ni",
+      "direction": "in",
+      "width": 1,
+      "role": "reset",
+      "active_low": true,
+      "iostandard": "LVCMOS33",
+      "package_pin": "AF12",
+      "xdc_ports": [
+        "rst_ni"
+      ],
+      "package_pin_status": "confirmed",
+      "board_signal": "PL_KEY1",
+      "manual_page": 48
+    },
+    {
+      "name": "uart_rx_i",
+      "direction": "in",
+      "width": 1,
+      "role": "uart_rx",
+      "iostandard": "LVCMOS33",
+      "package_pin": "AH11",
+      "xdc_ports": [
+        "uart_rx_i"
+      ],
+      "package_pin_status": "confirmed",
+      "board_signal": "PL_UART_RX",
+      "manual_page": 40
+    },
+    {
+      "name": "uart_tx_o",
+      "direction": "out",
+      "width": 1,
+      "role": "uart_tx",
+      "iostandard": "LVCMOS33",
+      "package_pin": "AH12",
+      "xdc_ports": [
+        "uart_tx_o"
+      ],
+      "package_pin_status": "confirmed",
+      "board_signal": "PL_UART_TX",
+      "manual_page": 40
+    },
+    {
+      "name": "edram_load_n_o",
+      "direction": "out",
+      "width": 1,
+      "role": "edram_control",
+      "active_low": true,
+      "iostandard": "LVCMOS33",
+      "package_pin": "B10",
+      "xdc_ports": [
+        "edram_load_n_o"
+      ],
+      "package_pin_status": "confirmed",
+      "board_connector": "J16",
+      "board_pin": 3,
+      "board_signal": "B45_L9_N",
+      "manual_page": 41
+    },
+    {
+      "name": "edram_read_n_o",
+      "direction": "out",
+      "width": 1,
+      "role": "edram_control",
+      "active_low": true,
+      "iostandard": "LVCMOS33",
+      "package_pin": "C11",
+      "xdc_ports": [
+        "edram_read_n_o"
+      ],
+      "package_pin_status": "confirmed",
+      "board_connector": "J16",
+      "board_pin": 4,
+      "board_signal": "B45_L9_P",
+      "manual_page": 41
+    },
+    {
+      "name": "edram_en_wwl_n_o",
+      "direction": "out",
+      "width": 1,
+      "role": "edram_control",
+      "active_low": true,
+      "iostandard": "LVCMOS33",
+      "package_pin": "F10",
+      "xdc_ports": [
+        "edram_en_wwl_n_o"
+      ],
+      "package_pin_status": "confirmed",
+      "board_connector": "J16",
+      "board_pin": 5,
+      "board_signal": "B45_L5_N",
+      "manual_page": 41
+    },
+    {
+      "name": "edram_en_rwl_n_o",
+      "direction": "out",
+      "width": 1,
+      "role": "edram_control",
+      "active_low": true,
+      "iostandard": "LVCMOS33",
+      "package_pin": "G11",
+      "xdc_ports": [
+        "edram_en_rwl_n_o"
+      ],
+      "package_pin_status": "confirmed",
+      "board_connector": "J16",
+      "board_pin": 6,
+      "board_signal": "B45_L5_P",
+      "manual_page": 41
+    },
+    {
+      "name": "edram_wg_o",
+      "direction": "out",
+      "width": 3,
+      "role": "edram_write_group",
+      "iostandard": "LVCMOS33",
+      "package_pins": [
+        "C12",
+        "D12",
+        "A11"
+      ],
+      "xdc_ports": [
+        "edram_wg_o[0]",
+        "edram_wg_o[1]",
+        "edram_wg_o[2]"
+      ],
+      "package_pin_status": "confirmed",
+      "board_pins": [
+        {
+          "index": 0,
+          "connector": "J16",
+          "pin": 7,
+          "signal": "B45_L12_N",
+          "package_pin": "C12",
+          "manual_page": 41
+        },
+        {
+          "index": 1,
+          "connector": "J16",
+          "pin": 8,
+          "signal": "B45_L12_P",
+          "package_pin": "D12",
+          "manual_page": 41
+        },
+        {
+          "index": 2,
+          "connector": "J16",
+          "pin": 9,
+          "signal": "B45_L11_N",
+          "package_pin": "A11",
+          "manual_page": 41
+        }
+      ]
+    },
+    {
+      "name": "edram_rg_o",
+      "direction": "out",
+      "width": 3,
+      "role": "edram_read_group",
+      "iostandard": "LVCMOS33",
+      "package_pins": [
+        "A12",
+        "F11",
+        "F12"
+      ],
+      "xdc_ports": [
+        "edram_rg_o[0]",
+        "edram_rg_o[1]",
+        "edram_rg_o[2]"
+      ],
+      "package_pin_status": "confirmed",
+      "board_pins": [
+        {
+          "index": 0,
+          "connector": "J16",
+          "pin": 10,
+          "signal": "B45_L11_P",
+          "package_pin": "A12",
+          "manual_page": 41
+        },
+        {
+          "index": 1,
+          "connector": "J16",
+          "pin": 11,
+          "signal": "B45_L6_N",
+          "package_pin": "F11",
+          "manual_page": 41
+        },
+        {
+          "index": 2,
+          "connector": "J16",
+          "pin": 12,
+          "signal": "B45_L6_P",
+          "package_pin": "F12",
+          "manual_page": 41
+        }
+      ]
+    },
+    {
+      "name": "edram_din_o",
+      "direction": "out",
+      "width": 8,
+      "role": "edram_write_data",
+      "iostandard": "LVCMOS33",
+      "package_pins": [
+        "E13",
+        "E14",
+        "A13",
+        "B13",
+        "A14",
+        "B14",
+        "C13",
+        "C14"
+      ],
+      "xdc_ports": [
+        "edram_din_o[0]",
+        "edram_din_o[1]",
+        "edram_din_o[2]",
+        "edram_din_o[3]",
+        "edram_din_o[4]",
+        "edram_din_o[5]",
+        "edram_din_o[6]",
+        "edram_din_o[7]"
+      ],
+      "package_pin_status": "confirmed",
+      "board_pins": [
+        {
+          "index": 0,
+          "connector": "J16",
+          "pin": 13,
+          "signal": "B46_L6_N",
+          "package_pin": "E13",
+          "manual_page": 41
+        },
+        {
+          "index": 1,
+          "connector": "J16",
+          "pin": 14,
+          "signal": "B46_L6_P",
+          "package_pin": "E14",
+          "manual_page": 41
+        },
+        {
+          "index": 2,
+          "connector": "J16",
+          "pin": 15,
+          "signal": "B46_L3_N",
+          "package_pin": "A13",
+          "manual_page": 41
+        },
+        {
+          "index": 3,
+          "connector": "J16",
+          "pin": 16,
+          "signal": "B46_L3_P",
+          "package_pin": "B13",
+          "manual_page": 41
+        },
+        {
+          "index": 4,
+          "connector": "J16",
+          "pin": 17,
+          "signal": "B46_L2_N",
+          "package_pin": "A14",
+          "manual_page": 41
+        },
+        {
+          "index": 5,
+          "connector": "J16",
+          "pin": 18,
+          "signal": "B46_L2_P",
+          "package_pin": "B14",
+          "manual_page": 41
+        },
+        {
+          "index": 6,
+          "connector": "J16",
+          "pin": 19,
+          "signal": "B46_L4_N",
+          "package_pin": "C13",
+          "manual_page": 41
+        },
+        {
+          "index": 7,
+          "connector": "J16",
+          "pin": 20,
+          "signal": "B46_L4_P",
+          "package_pin": "C14",
+          "manual_page": 41
+        }
+      ]
+    },
+    {
+      "name": "edram_a_o",
+      "direction": "out",
+      "width": 6,
+      "role": "edram_write_row",
+      "iostandard": "LVCMOS33",
+      "package_pins": [
+        "L13",
+        "L14",
+        "H12",
+        "J12",
+        "J14",
+        "K14"
+      ],
+      "xdc_ports": [
+        "edram_a_o[0]",
+        "edram_a_o[1]",
+        "edram_a_o[2]",
+        "edram_a_o[3]",
+        "edram_a_o[4]",
+        "edram_a_o[5]"
+      ],
+      "package_pin_status": "confirmed",
+      "board_pins": [
+        {
+          "index": 0,
+          "connector": "J16",
+          "pin": 21,
+          "signal": "B46_L12_N",
+          "package_pin": "L13",
+          "manual_page": 41
+        },
+        {
+          "index": 1,
+          "connector": "J16",
+          "pin": 22,
+          "signal": "B46_L12_P",
+          "package_pin": "L14",
+          "manual_page": 41
+        },
+        {
+          "index": 2,
+          "connector": "J16",
+          "pin": 23,
+          "signal": "B45_L4_N",
+          "package_pin": "H12",
+          "manual_page": 41
+        },
+        {
+          "index": 3,
+          "connector": "J16",
+          "pin": 24,
+          "signal": "B45_L4_P",
+          "package_pin": "J12",
+          "manual_page": 41
+        },
+        {
+          "index": 4,
+          "connector": "J16",
+          "pin": 25,
+          "signal": "B46_L11_N",
+          "package_pin": "J14",
+          "manual_page": 41
+        },
+        {
+          "index": 5,
+          "connector": "J16",
+          "pin": 26,
+          "signal": "B46_L11_P",
+          "package_pin": "K14",
+          "manual_page": 41
+        }
+      ]
+    },
+    {
+      "name": "edram_w_o",
+      "direction": "out",
+      "width": 6,
+      "role": "edram_read_row",
+      "iostandard": "LVCMOS33",
+      "package_pins": [
+        "H13",
+        "H14",
+        "F13",
+        "G13",
+        "G14",
+        "G15"
+      ],
+      "xdc_ports": [
+        "edram_w_o[0]",
+        "edram_w_o[1]",
+        "edram_w_o[2]",
+        "edram_w_o[3]",
+        "edram_w_o[4]",
+        "edram_w_o[5]"
+      ],
+      "package_pin_status": "confirmed",
+      "board_pins": [
+        {
+          "index": 0,
+          "connector": "J16",
+          "pin": 27,
+          "signal": "B46_L10_N",
+          "package_pin": "H13",
+          "manual_page": 41
+        },
+        {
+          "index": 1,
+          "connector": "J16",
+          "pin": 28,
+          "signal": "B46_L10_P",
+          "package_pin": "H14",
+          "manual_page": 41
+        },
+        {
+          "index": 2,
+          "connector": "J16",
+          "pin": 29,
+          "signal": "B46_L7_N",
+          "package_pin": "F13",
+          "manual_page": 41
+        },
+        {
+          "index": 3,
+          "connector": "J16",
+          "pin": 30,
+          "signal": "B46_L7_P",
+          "package_pin": "G13",
+          "manual_page": 41
+        },
+        {
+          "index": 4,
+          "connector": "J16",
+          "pin": 31,
+          "signal": "B46_L9_N",
+          "package_pin": "G14",
+          "manual_page": 41
+        },
+        {
+          "index": 5,
+          "connector": "J16",
+          "pin": 32,
+          "signal": "B46_L9_P",
+          "package_pin": "G15",
+          "manual_page": 41
+        }
+      ]
+    },
+    {
+      "name": "edram_p_i",
+      "direction": "in",
+      "width": 8,
+      "role": "edram_read_data",
+      "iostandard": "LVCMOS33",
+      "package_pins": [
+        "AG11",
+        "AF11",
+        "AB14",
+        "AB15",
+        "W13",
+        "W14",
+        "W11",
+        "W12"
+      ],
+      "xdc_ports": [
+        "edram_p_i[0]",
+        "edram_p_i[1]",
+        "edram_p_i[2]",
+        "edram_p_i[3]",
+        "edram_p_i[4]",
+        "edram_p_i[5]",
+        "edram_p_i[6]",
+        "edram_p_i[7]"
+      ],
+      "package_pin_status": "confirmed",
+      "board_pins": [
+        {
+          "index": 0,
+          "connector": "J15",
+          "pin": 3,
+          "signal": "B43_L2_N",
+          "package_pin": "AG11",
+          "manual_page": 42
+        },
+        {
+          "index": 1,
+          "connector": "J15",
+          "pin": 4,
+          "signal": "B43_L2_P",
+          "package_pin": "AF11",
+          "manual_page": 42
+        },
+        {
+          "index": 2,
+          "connector": "J15",
+          "pin": 5,
+          "signal": "B44_L8_N",
+          "package_pin": "AB14",
+          "manual_page": 42
+        },
+        {
+          "index": 3,
+          "connector": "J15",
+          "pin": 6,
+          "signal": "B44_L8_P",
+          "package_pin": "AB15",
+          "manual_page": 42
+        },
+        {
+          "index": 4,
+          "connector": "J15",
+          "pin": 7,
+          "signal": "B44_L9_N",
+          "package_pin": "W13",
+          "manual_page": 42
+        },
+        {
+          "index": 5,
+          "connector": "J15",
+          "pin": 8,
+          "signal": "B44_L9_P",
+          "package_pin": "W14",
+          "manual_page": 42
+        },
+        {
+          "index": 6,
+          "connector": "J15",
+          "pin": 9,
+          "signal": "B44_L11_N",
+          "package_pin": "W11",
+          "manual_page": 42
+        },
+        {
+          "index": 7,
+          "connector": "J15",
+          "pin": 10,
+          "signal": "B44_L11_P",
+          "package_pin": "W12",
+          "manual_page": 42
+        }
+      ]
+    }
+  ],
+  "unresolved": [],
+  "spares": [
+    {
+      "connector": "J16",
+      "pins": [
+        {
+          "pin": 33,
+          "signal": "B46_L5_N",
+          "package_pin": "D14"
+        },
+        {
+          "pin": 34,
+          "signal": "B46_L5_P",
+          "package_pin": "D15"
+        },
+        {
+          "pin": 35,
+          "signal": "B46_L1_N",
+          "package_pin": "A15"
+        },
+        {
+          "pin": 36,
+          "signal": "B46_L1_P",
+          "package_pin": "B15"
+        }
+      ]
+    }
+  ]
+}

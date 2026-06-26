@@ -33,16 +33,22 @@
 
 ## 5. Simulation and Verification
 
-- [ ] 5.1 Add parser tests for valid frames, invalid `SOF`, bad checksum, bad length, bad opcode, and bad arguments
-- [ ] 5.2 Add response encoder tests for ACK and NACK frame bytes and XOR checksum
-- [ ] 5.3 Add dispatcher tests for `PING`, `RESET`, `STATUS`, busy handling, and timeout handling
-- [ ] 5.4 Add eDRAM write timing tests that check `WG`, `DIN`, `LOAD`, `A`, and `EN-WWL` cycle order
-- [ ] 5.5 Add eDRAM read timing tests that check `W`, `RG`, `READ`, `EN-RWL`, and `P[7:0]` sample timing
-- [ ] 5.6 Add top-level UART command tests for `WRITE_ROW`, `READ_GROUP`, and `READ_ROW`
+- [x] 5.1 Add parser tests for valid frames, invalid `SOF`, bad checksum, bad length, bad opcode, and bad arguments
+- [x] 5.2 Add response encoder tests for ACK and NACK frame bytes and XOR checksum
+- [x] 5.3 Add dispatcher tests for `PING`, `RESET`, `STATUS`, busy handling, and timeout handling
+- [x] 5.4 Add eDRAM write timing tests that check `WG`, `DIN`, `LOAD`, `A`, and `EN-WWL` cycle order
+- [x] 5.5 Add eDRAM read timing tests that check `W`, `RG`, `READ`, `EN-RWL`, and `P[7:0]` sample timing
+- [x] 5.6 Add top-level UART command tests for `WRITE_ROW`, `READ_GROUP`, and `READ_ROW`
 
 ## 6. Vivado and Documentation
 
 - [ ] 6.1 Add Vivado Tcl file-list updates for the new `src/rtl` modules
 - [ ] 6.2 Add or update XDC placeholders for UART and eDRAM PL pins once board pin mapping is selected
 - [ ] 6.3 Update `doc/eDRAM-FPGA-interface.md` to align wording with the selected per-group `LOAD` pulse and read sampling timing
-- [ ] 6.4 Run available simulation or lint commands and record the exact commands and results in the implementation notes
+- [x] 6.4 Run available simulation or lint commands and record the exact commands and results in the implementation notes
+
+## Implementation Notes
+
+- 2026-06-26: `conda run -n track4-fa python sim/tb/protocol.py` passed and validates the documented UART frame examples.
+- 2026-06-26: `conda run -n track4-fa python sim/tb/run_cocotb.py` passed with Verilator 5.048 and cocotb 1.9.2. The suite covers parser, response encoder, dispatcher, eDRAM controller timing, and PL top-level UART command paths.
+- Vivado Tcl/XDC tasks remain pending until the external interface and pin mapping are confirmed.

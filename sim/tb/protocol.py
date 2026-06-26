@@ -36,6 +36,18 @@ def build_response(status, op, data=()):
     return [SOF_RESP, length, *body, checksum([length, *body])]
 
 
+def ping_frame():
+    return build_request(OP_PING)
+
+
+def reset_frame():
+    return build_request(OP_RESET)
+
+
+def status_frame():
+    return build_request(OP_STATUS)
+
+
 def write_row_frame(row, data_groups):
     if not 0 <= row <= 0x3F:
         raise ValueError("row out of range")
@@ -76,9 +88,15 @@ def parse_response(frame):
     return {"status": status, "op": op_echo, "data": data}
 
 
+def corrupt_checksum(frame):
+    frame = list(frame)
+    frame[-1] ^= 0xFF
+    return frame
+
+
 def self_test():
     data = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77]
-    assert build_request(OP_PING) == [0x55, 0x01, 0x00, 0x01]
+    assert ping_frame() == [0x55, 0x01, 0x00, 0x01]
     assert build_response(STAT_ACK, OP_PING, [0xA5]) == [0xAA, 0x03, 0x00, 0x00, 0xA5, 0xA6]
     assert write_row_frame(0x0C, data) == [
         0x55, 0x0A, 0x01, 0x0C, 0x00, 0x11, 0x22,
@@ -88,8 +106,8 @@ def self_test():
     assert read_group_frame(0x0C, 0x03) == [0x55, 0x03, 0x02, 0x0C, 0x03, 0x0E]
     assert build_response(STAT_ACK, OP_READ_GROUP, [0x5A]) == [0xAA, 0x03, 0x00, 0x02, 0x5A, 0x5B]
     assert read_row_frame(0x0C) == [0x55, 0x02, 0x03, 0x0C, 0x0D]
-    assert build_request(OP_RESET) == [0x55, 0x01, 0x04, 0x05]
-    assert build_request(OP_STATUS) == [0x55, 0x01, 0x05, 0x04]
+    assert reset_frame() == [0x55, 0x01, 0x04, 0x05]
+    assert status_frame() == [0x55, 0x01, 0x05, 0x04]
     assert build_response(STAT_ACK, OP_STATUS, [0x00, 0x00]) == [
         0xAA, 0x04, 0x00, 0x05, 0x00, 0x00, 0x01,
     ]

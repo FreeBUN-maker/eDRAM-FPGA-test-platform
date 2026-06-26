@@ -3,14 +3,26 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, FallingEdge, NextTimeStep, ReadOnly, RisingEdge, with_timeout
 
 from protocol import (
+    OP_PING,
     OP_READ_GROUP,
     OP_READ_ROW,
+    OP_RESET,
+    OP_STATUS,
     OP_WRITE_ROW,
     STAT_ACK,
+    STAT_NACK_BAD_ARG,
+    STAT_NACK_BAD_CHK,
+    STAT_NACK_BAD_LEN,
+    STAT_NACK_BAD_OP,
+    build_request,
     build_response,
+    corrupt_checksum,
+    ping_frame,
     parse_response,
     read_group_frame,
     read_row_frame,
+    reset_frame,
+    status_frame,
     write_row_frame,
 )
 
@@ -73,6 +85,20 @@ async def edram_read_model(dut):
             dut.edram_p_i.value = 0x30 + group
 
 
+async def assert_edram_idle(dut):
+    await ReadOnly()
+    assert int(dut.edram_load_n_o.value) == 1
+    assert int(dut.edram_read_n_o.value) == 1
+    assert int(dut.edram_en_wwl_n_o.value) == 1
+    assert int(dut.edram_en_rwl_n_o.value) == 1
+    assert int(dut.edram_wg_o.value) == 0
+    assert int(dut.edram_rg_o.value) == 0
+    assert int(dut.edram_din_o.value) == 0
+    assert int(dut.edram_a_o.value) == 0
+    assert int(dut.edram_w_o.value) == 0
+    await NextTimeStep()
+
+
 @cocotb.test()
 async def uart_write_read_group_and_read_row(dut):
     cocotb.start_soon(Clock(dut.clk_i, 1, units="us").start())
@@ -91,3 +117,56 @@ async def uart_write_read_group_and_read_row(dut):
     await send_uart_frame(dut, read_row_frame(0x0C))
     frame = await recv_response(dut)
     assert frame == build_response(STAT_ACK, OP_READ_ROW, [0x30 + i for i in range(8)])
+
+
+@cocotb.test()
+async def uart_control_frames(dut):
+    cocotb.start_soon(Clock(dut.clk_i, 1, units="us").start())
+    await reset(dut)
+    await assert_edram_idle(dut)
+
+    await send_uart_frame(dut, ping_frame())
+    frame = await recv_response(dut)
+    assert frame == build_response(STAT_ACK, OP_PING, [0xA5])
+    await assert_edram_idle(dut)
+
+    await send_uart_frame(dut, status_frame())
+    frame = await recv_response(dut)
+    assert frame == build_response(STAT_ACK, OP_STATUS, [0x00, 0x00])
+    await assert_edram_idle(dut)
+
+    await send_uart_frame(dut, reset_frame())
+    frame = await recv_response(dut)
+    assert frame == build_response(STAT_ACK, OP_RESET)
+    await assert_edram_idle(dut)
+
+
+@cocotb.test()
+async def uart_error_frames_return_nacks_and_leave_edram_idle(dut):
+    cocotb.start_soon(Clock(dut.clk_i, 1, units="us").start())
+    await reset(dut)
+
+    await send_uart_byte(dut, 0x00)
+    await send_uart_frame(dut, ping_frame())
+    frame = await recv_response(dut)
+    assert frame == build_response(STAT_ACK, OP_PING, [0xA5])
+
+    await send_uart_frame(dut, corrupt_checksum(ping_frame()))
+    frame = await recv_response(dut)
+    assert frame == build_response(STAT_NACK_BAD_CHK, OP_PING)
+    await assert_edram_idle(dut)
+
+    await send_uart_frame(dut, build_request(OP_READ_GROUP, [0x0C]))
+    frame = await recv_response(dut)
+    assert frame == build_response(STAT_NACK_BAD_LEN, OP_READ_GROUP)
+    await assert_edram_idle(dut)
+
+    await send_uart_frame(dut, build_request(0x99))
+    frame = await recv_response(dut)
+    assert frame == build_response(STAT_NACK_BAD_OP, 0x99)
+    await assert_edram_idle(dut)
+
+    await send_uart_frame(dut, build_request(OP_READ_GROUP, [0x40, 0x08]))
+    frame = await recv_response(dut)
+    assert frame == build_response(STAT_NACK_BAD_ARG, OP_READ_GROUP)
+    await assert_edram_idle(dut)
