@@ -87,3 +87,26 @@ EOF
 ```
 
 该检查会验证 Tcl 可解析、必需文件存在、`config.json` 的 project 字段可读取、stage override 可解析；不会执行 xsim、综合、实现或 bitstream 生成。
+
+## Windows Vivado 复测检查点
+
+在 Windows Vivado Tcl Console 中可直接复测默认完整流程：
+
+```tcl
+source E:/Files/Li_Meng/eDRAM/FPGA/src/vivado/run_project_mode.tcl
+```
+
+如果只想复测到 xsim 编译和 smoke simulation，可先限制 stage：
+
+```tcl
+set ::EDRAM_VIVADO_STAGES {project sources constraints simulate}
+source E:/Files/Li_Meng/eDRAM/FPGA/src/vivado/run_project_mode.tcl
+```
+
+预期 Tcl Console 检查点：
+
+- 出现 `Configured sources_1 top: edram_pl_board_top`。
+- 出现 `Configured sim_1 top: edram_pl_board_top_vivado_tb`。
+- xsim 进入 `XSim::Compile design` 和 `COMPILE and ANALYZE`。
+- 不再出现 `[VRFC 10-1103] net type must be explicitly specified`，尤其不应再停在 `cmd_dispatcher.sv:6`。
+- smoke simulation 结束后出现 `Vivado simulation completed`；默认完整流程随后继续 synthesis、implementation 和 bitstream。

@@ -3,35 +3,35 @@
 import edram_pkg::*;
 
 module cmd_dispatcher (
-  input  logic                                      clk_i,
-  input  logic                                      rst_ni,
+  input  wire logic                                      clk_i,
+  input  wire logic                                      rst_ni,
 
-  input  logic                                      cmd_valid_i,
-  input  logic [7:0]                                cmd_op_i,
-  input  logic [7:0]                                cmd_len_i,
-  input  logic [UART_REQ_MAX_ARGS*8-1:0]            cmd_args_i,
+  input  wire logic                                      cmd_valid_i,
+  input  wire logic [7:0]                                cmd_op_i,
+  input  wire logic [7:0]                                cmd_len_i,
+  input  wire logic [UART_REQ_MAX_ARGS*8-1:0]            cmd_args_i,
 
-  input  logic                                      parse_err_valid_i,
-  input  logic [7:0]                                parse_err_status_i,
-  input  logic [7:0]                                parse_err_op_i,
+  input  wire logic                                      parse_err_valid_i,
+  input  wire logic [7:0]                                parse_err_status_i,
+  input  wire logic [7:0]                                parse_err_op_i,
 
   output logic                                      resp_valid_o,
-  input  logic                                      resp_ready_i,
+  input  wire logic                                      resp_ready_i,
   output logic [7:0]                                resp_status_o,
   output logic [7:0]                                resp_op_o,
   output logic [3:0]                                resp_data_len_o,
   output logic [UART_RESP_MAX_DATA*8-1:0]           resp_data_o,
 
   output logic                                      edram_req_valid_o,
-  input  logic                                      edram_req_ready_i,
+  input  wire logic                                      edram_req_ready_i,
   output edram_req_e                                edram_req_op_o,
   output logic [5:0]                                edram_req_row_o,
   output logic [2:0]                                edram_req_group_o,
   output logic [EDRAM_ROW_BYTES*8-1:0]              edram_req_write_data_o,
-  input  logic                                      edram_busy_i,
-  input  logic                                      edram_done_i,
-  input  logic                                      edram_timeout_i,
-  input  logic [7:0]                                edram_read_data_i,
+  input  wire logic                                      edram_busy_i,
+  input  wire logic                                      edram_done_i,
+  input  wire logic                                      edram_timeout_i,
+  input  wire logic [7:0]                                edram_read_data_i,
   output logic                                      edram_soft_reset_o
 );
   typedef enum logic [2:0] {

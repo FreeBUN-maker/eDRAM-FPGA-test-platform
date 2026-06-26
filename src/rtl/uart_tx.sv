@@ -4,10 +4,10 @@ module uart_tx #(
   parameter int unsigned CLK_HZ    = 100_000_000,
   parameter int unsigned UART_BAUD = 115200
 ) (
-  input  logic       clk_i,
-  input  logic       rst_ni,
-  input  logic [7:0] byte_i,
-  input  logic       byte_valid_i,
+  input  wire logic       clk_i,
+  input  wire logic       rst_ni,
+  input  wire logic [7:0] byte_i,
+  input  wire logic       byte_valid_i,
   output logic       byte_ready_o,
   output logic       tx_o,
   output logic       busy_o

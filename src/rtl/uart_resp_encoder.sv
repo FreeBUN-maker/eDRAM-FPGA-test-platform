@@ -3,17 +3,17 @@
 import edram_pkg::*;
 
 module uart_resp_encoder (
-  input  logic                                      clk_i,
-  input  logic                                      rst_ni,
-  input  logic                                      resp_valid_i,
+  input  wire logic                                      clk_i,
+  input  wire logic                                      rst_ni,
+  input  wire logic                                      resp_valid_i,
   output logic                                      resp_ready_o,
-  input  logic [7:0]                                resp_status_i,
-  input  logic [7:0]                                resp_op_i,
-  input  logic [3:0]                                resp_data_len_i,
-  input  logic [UART_RESP_MAX_DATA*8-1:0]           resp_data_i,
+  input  wire logic [7:0]                                resp_status_i,
+  input  wire logic [7:0]                                resp_op_i,
+  input  wire logic [3:0]                                resp_data_len_i,
+  input  wire logic [UART_RESP_MAX_DATA*8-1:0]           resp_data_i,
   output logic [7:0]                                tx_byte_o,
   output logic                                      tx_valid_o,
-  input  logic                                      tx_ready_i,
+  input  wire logic                                      tx_ready_i,
   output logic                                      busy_o
 );
   localparam logic [3:0] RESP_MAX_DATA_N = 4'(UART_RESP_MAX_DATA);

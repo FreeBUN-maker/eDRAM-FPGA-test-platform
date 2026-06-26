@@ -10,9 +10,9 @@ module pl_clk_diff_to_single #(
   parameter bit          SIM_BYPASS         = 1'b0,
   parameter int unsigned LOCK_DELAY_CYCLES  = 4
 ) (
-  input  logic clk_p_i,
-  input  logic clk_n_i,
-  input  logic rst_ni,
+  input  wire logic clk_p_i,
+  input  wire logic clk_n_i,
+  input  wire logic rst_ni,
   output logic clk_o,
   output logic locked_o
 );

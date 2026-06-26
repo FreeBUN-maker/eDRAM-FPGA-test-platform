@@ -4,10 +4,10 @@ module uart_baud_gen #(
   parameter int unsigned CLK_HZ    = 100_000_000,
   parameter int unsigned UART_BAUD = 115200
 ) (
-  input  logic clk_i,
-  input  logic rst_ni,
-  input  logic enable_i,
-  input  logic restart_i,
+  input  wire logic clk_i,
+  input  wire logic rst_ni,
+  input  wire logic enable_i,
+  input  wire logic restart_i,
   output logic tick_o
 );
   localparam int unsigned CLKS_PER_BIT_RAW =

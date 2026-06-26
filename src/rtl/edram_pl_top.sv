@@ -18,10 +18,10 @@ module edram_pl_top #(
   parameter int unsigned CTRL_TIMEOUT_CYCLES   = EDRAM_CTRL_TIMEOUT_DEFAULT,
   parameter int unsigned P_SYNC_STAGES         = 2
 ) (
-  input  logic       clk_i,
-  input  logic       rst_ni,
+  input  wire logic       clk_i,
+  input  wire logic       rst_ni,
 
-  input  logic       uart_rx_i,
+  input  wire logic       uart_rx_i,
   output logic       uart_tx_o,
 
   output logic       edram_load_n_o,
@@ -33,7 +33,7 @@ module edram_pl_top #(
   output logic [7:0] edram_din_o,
   output logic [5:0] edram_a_o,
   output logic [5:0] edram_w_o,
-  input  logic [7:0] edram_p_i
+  input  wire logic [7:0] edram_p_i
 );
   logic [7:0] rx_byte;
   logic rx_byte_valid;
