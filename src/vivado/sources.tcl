@@ -43,14 +43,41 @@ namespace eval edram_vivado {
     return $resolved_sources
   }
 
+  proc assert_files_exist {source_files} {
+    foreach source_file $source_files {
+      if {![file exists $source_file]} {
+        return -code error "Required RTL source not found: $source_file"
+      }
+    }
+  }
+
+  proc get_file_objects {source_files} {
+    set file_objects [list]
+    foreach source_file $source_files {
+      set matches [get_files -quiet $source_file]
+      if {[llength $matches] == 0} {
+        return -code error "Vivado did not add RTL source: $source_file"
+      }
+      foreach match $matches {
+        lappend file_objects $match
+      }
+    }
+    return $file_objects
+  }
+
   proc add_rtl_sources {{repo_root ""}} {
     set resolved_sources [resolve_rtl_sources $repo_root]
+    assert_files_exist $resolved_sources
     add_files -fileset sources_1 -norecurse $resolved_sources
-    set_property file_type SystemVerilog [get_files $resolved_sources]
+    set_property file_type SystemVerilog [get_file_objects $resolved_sources]
     update_compile_order -fileset sources_1
   }
 
   proc read_rtl_sources {{repo_root ""}} {
-    read_verilog -sv [resolve_rtl_sources $repo_root]
+    set resolved_sources [resolve_rtl_sources $repo_root]
+    assert_files_exist $resolved_sources
+    foreach source_file $resolved_sources {
+      read_verilog -sv $source_file
+    }
   }
 }

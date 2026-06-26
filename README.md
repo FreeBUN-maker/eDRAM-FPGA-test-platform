@@ -16,3 +16,8 @@
 - AXU5EVB-E 板级 Vivado 工程使用 `src/rtl/edram_pl_board_top.sv` 作为 top。该 wrapper 接收 `PL_CLK0_P/PL_CLK0_N` 200 MHz 差分时钟，并通过 `pl_clk_diff_to_single` 生成单端核心时钟。
 - 默认 MMCM 参数为 200 MHz 输入、100 MHz 输出；需要调整核心时钟频率时，修改 board top 的时钟参数并同步更新 `src/vivado/config.json` 中的 `CLK_HZ`。
 - 默认参数对应 `200 MHz * 5 / 1 = 1 GHz` VCO、`1 GHz / 10 = 100 MHz` 输出；该组合已按 AMD DS925 的 Zynq UltraScale+ MMCM switching range 做过初步检查，最终板级约束仍以 Vivado DRC/Timing 为准。
+
+# Vivado工程构建
+- Vivado GUI project mode 构建入口为 `src/vivado/run_project_mode.tcl`，可通过 `Tools -> Run Tcl Script` 执行。
+- 默认流程会创建工程、加入 RTL、加载 `src/vivado/edram_pl_board.xdc`、运行 Vivado xsim smoke 仿真、综合、实现并生成 bitstream。
+- 详细用法见 `doc/Vivado-project-mode-flow.md`。
