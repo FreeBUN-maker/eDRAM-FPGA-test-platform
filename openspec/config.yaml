@@ -1,0 +1,30 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+context: |
+  Tech stack: SystemVerilog, Vivado, FPGA(Zynq-UltraScale+MPSoCs), Python, GitHub Actions
+  We use conventional commits
+  Domain: FPGA based hardware prototype verification platform
+  项目的整体描述在README.md中
+  当前目录下的"AXU5EVB-E开发板用户手册.pdf"是AXU5EVB-E开发板的用户手册，包含了开发板的硬件规格、接口说明、使用方法等信息。
+  输出的RTL设计存放在src/rtl目录下，用于控制vivado配置的tcl脚本放在src/vivado目录下
+  输出的文档放在doc/目录下
+  输出的tb放在sim/tb目录下
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+rules:
+  proposal:
+    - Describe the problem and solution
+    - Always include a "Non-goals" section
+  design:
+    - Include a block diagram of the design
+    - Include a timing diagram of the design
+    - Show the impact of the design on the overall system
+    - Show modules to be revised
+  tasks:
+    - Break tasks into chunks of max 1 hour
