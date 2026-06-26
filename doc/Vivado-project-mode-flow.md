@@ -109,4 +109,5 @@ source E:/Files/Li_Meng/eDRAM/FPGA/src/vivado/run_project_mode.tcl
 - 出现 `Configured sim_1 top: edram_pl_board_top_vivado_tb`。
 - xsim 进入 `XSim::Compile design` 和 `COMPILE and ANALYZE`。
 - 不再出现 `[VRFC 10-1103] net type must be explicitly specified`，尤其不应再停在 `cmd_dispatcher.sv:6`。
-- smoke simulation 结束后出现 `Vivado simulation completed`；默认完整流程随后继续 synthesis、implementation 和 bitstream。
+- smoke simulation 结束后出现 `Vivado simulation completed`，且不再出现 `Simulation failed: wrong # args: should be "run"`。
+- 默认完整流程随后继续 synthesis、implementation 和 bitstream；只运行到 `simulate` stage 时则应在仿真完成后正常结束。

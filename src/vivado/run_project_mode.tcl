@@ -471,7 +471,6 @@ proc edram_project::run_simulation {} {
   log "Launching Vivado behavioral simulation"
   set failed [catch {
     launch_simulation -simset sim_1 -mode behavioral
-    run all
   } result]
   catch {close_sim}
   if {$failed} {

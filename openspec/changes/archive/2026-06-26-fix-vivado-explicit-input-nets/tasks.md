@@ -20,7 +20,7 @@
 
 - [x] 4.1 Add or run a static check that fails on module input ports relying on implicit net types
 - [x] 4.2 Run available local HDL tests or lint checks in the project environment
-- [ ] 4.3 Run `src/vivado/run_project_mode.tcl` in Windows Vivado and confirm xsim compile advances past the reported `cmd_dispatcher.sv` VRFC errors
+- [x] 4.3 Run `src/vivado/run_project_mode.tcl` in Windows Vivado and confirm xsim compile advances past the reported `cmd_dispatcher.sv` VRFC errors
 - [x] 4.4 If Vivado is unavailable locally, document the exact command and expected Tcl console checkpoints for the Windows rerun
 
 ## Implementation Notes
@@ -33,3 +33,4 @@
 - 2026-06-26: `conda run -n track4-fa python sim/tb/run_cocotb.py` passed with Verilator/cocotb.
 - 2026-06-26: `tclsh` validate-only run passed with `::EDRAM_VIVADO_VALIDATE_ONLY=1`.
 - 2026-06-26: `command -v vivado` did not find Vivado in this Linux workspace; Windows Vivado rerun command and expected checkpoints were documented in `doc/Vivado-project-mode-flow.md`.
+- 2026-06-26: User manually reran the project-mode Tcl flow in Windows Vivado and confirmed xsim no longer stops at the previous `cmd_dispatcher.sv` VRFC net-type error.
