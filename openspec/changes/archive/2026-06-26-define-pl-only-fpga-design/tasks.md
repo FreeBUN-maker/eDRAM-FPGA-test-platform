@@ -42,13 +42,15 @@
 
 ## 6. Vivado and Documentation
 
-- [ ] 6.1 Add Vivado Tcl file-list updates for the new `src/rtl` modules
-- [ ] 6.2 Add or update XDC placeholders for UART and eDRAM PL pins once board pin mapping is selected
-- [ ] 6.3 Update `doc/eDRAM-FPGA-interface.md` to align wording with the selected per-group `LOAD` pulse and read sampling timing
+- [x] 6.1 Add Vivado Tcl file-list updates for the new `src/rtl` modules
+- [x] 6.2 Add or update XDC placeholders for UART and eDRAM PL pins once board pin mapping is selected
+- [x] 6.3 Update `doc/eDRAM-FPGA-interface.md` to align wording with the selected per-group `LOAD` pulse and read sampling timing
 - [x] 6.4 Run available simulation or lint commands and record the exact commands and results in the implementation notes
 
 ## Implementation Notes
 
 - 2026-06-26: `conda run -n track4-fa python sim/tb/protocol.py` passed and validates the documented UART frame examples.
 - 2026-06-26: `conda run -n track4-fa python sim/tb/run_cocotb.py` passed with Verilator 5.048 and cocotb 1.9.2. The suite covers parser, response encoder, dispatcher, eDRAM controller timing, and PL top-level UART command paths.
-- Vivado Tcl/XDC tasks remain pending until the external interface and pin mapping are confirmed.
+- 2026-06-26: `python3 -m json.tool src/vivado/config.json >/dev/null` passed.
+- 2026-06-26: `tclsh` source checks for `src/vivado/sources.tcl` and `src/vivado/edram_pl_board.xdc` passed; all listed RTL source files exist and the XDC parses with stubbed Vivado commands.
+- 2026-06-26: Python XDC/config consistency check passed; 43 constrained XDC ports match `src/vivado/config.json`.
