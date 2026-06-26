@@ -6,22 +6,22 @@
 
 ## 2. RTL Parser Preparation
 
-- [ ] 2.1 Define protocol constants for SOF, opcode, status, and maximum frame length
-- [ ] 2.2 Implement UART request frame parser FSM
-- [ ] 2.3 Implement checksum validation and malformed-frame rejection
+- [x] 2.1 Define protocol constants for SOF, opcode, status, and maximum frame length
+- [x] 2.2 Implement UART request frame parser FSM
+- [x] 2.3 Implement checksum validation and malformed-frame rejection
 
 ## 3. Command Execution
 
-- [ ] 3.1 Implement `WRITE_ROW` command dispatch to the eDRAM write FSM
-- [ ] 3.2 Implement `READ_GROUP` command dispatch and readback capture
-- [ ] 3.3 Implement `READ_ROW` command dispatch by scanning groups 0 through 7
-- [ ] 3.4 Implement `RESET`, `STATUS`, and `PING` commands
+- [x] 3.1 Implement `WRITE_ROW` command dispatch to the eDRAM write FSM
+- [x] 3.2 Implement `READ_GROUP` command dispatch and readback capture
+- [x] 3.3 Implement `READ_ROW` command dispatch by scanning groups 0 through 7
+- [x] 3.4 Implement `RESET`, `STATUS`, and `PING` commands
 
 ## 4. Response Path
 
-- [ ] 4.1 Implement response frame encoder
-- [ ] 4.2 Emit ACK responses for successful commands
-- [ ] 4.3 Emit NACK responses for checksum, length, opcode, argument, busy, and timeout errors
+- [x] 4.1 Implement response frame encoder
+- [x] 4.2 Emit ACK responses for successful commands
+- [x] 4.3 Emit NACK responses for checksum, length, opcode, argument, busy, and timeout errors
 
 ## 5. Host and Verification
 
