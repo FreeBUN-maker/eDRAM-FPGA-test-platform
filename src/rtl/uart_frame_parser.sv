@@ -3,12 +3,12 @@
 import edram_pkg::*;
 
 module uart_frame_parser (
-  input  logic                                      clk_i,
-  input  logic                                      rst_ni,
-  input  logic                                      clear_i,
-  input  logic [7:0]                                byte_i,
-  input  logic                                      byte_valid_i,
-  input  logic                                      framing_error_i,
+  input  wire logic                                      clk_i,
+  input  wire logic                                      rst_ni,
+  input  wire logic                                      clear_i,
+  input  wire logic [7:0]                                byte_i,
+  input  wire logic                                      byte_valid_i,
+  input  wire logic                                      framing_error_i,
   output logic                                      cmd_valid_o,
   output logic [7:0]                                cmd_op_o,
   output logic [7:0]                                cmd_len_o,

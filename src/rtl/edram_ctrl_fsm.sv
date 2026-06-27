@@ -16,16 +16,16 @@ module edram_ctrl_fsm #(
   parameter int unsigned CTRL_TIMEOUT_CYCLES   = EDRAM_CTRL_TIMEOUT_DEFAULT,
   parameter int unsigned P_SYNC_STAGES         = 2
 ) (
-  input  logic                         clk_i,
-  input  logic                         rst_ni,
-  input  logic                         soft_reset_i,
+  input  wire logic                         clk_i,
+  input  wire logic                         rst_ni,
+  input  wire logic                         soft_reset_i,
 
-  input  logic                         req_valid_i,
+  input  wire logic                         req_valid_i,
   output logic                         req_ready_o,
-  input  edram_req_e                   req_op_i,
-  input  logic [5:0]                   req_row_i,
-  input  logic [2:0]                   req_group_i,
-  input  logic [EDRAM_ROW_BYTES*8-1:0] req_write_data_i,
+  input  wire edram_req_e                   req_op_i,
+  input  wire logic [5:0]                   req_row_i,
+  input  wire logic [2:0]                   req_group_i,
+  input  wire logic [EDRAM_ROW_BYTES*8-1:0] req_write_data_i,
 
   output logic                         done_o,
   output logic                         timeout_o,
@@ -41,7 +41,7 @@ module edram_ctrl_fsm #(
   output logic [7:0]                   edram_din_o,
   output logic [5:0]                   edram_a_o,
   output logic [5:0]                   edram_w_o,
-  input  logic [7:0]                   edram_p_i
+  input  wire logic [7:0]                   edram_p_i
 );
   localparam int unsigned LOAD_SETUP_CYCLES =
       (T_LOAD_SETUP_CYCLES < 1) ? 1 : T_LOAD_SETUP_CYCLES;

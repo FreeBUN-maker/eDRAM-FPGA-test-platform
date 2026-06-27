@@ -5,14 +5,18 @@ from cocotb.triggers import ClockCycles, NextTimeStep, ReadOnly, RisingEdge
 from protocol import (
     OP_PING,
     OP_READ_GROUP,
+    OP_READ_OUTPUTS,
+    OP_READ_OUTPUT_TRACE,
     OP_READ_ROW,
     OP_RESET,
     OP_STATUS,
     OP_WRITE_ROW,
     STAT_ACK,
     STAT_NACK_BAD_OP,
+    STAT_NACK_BAD_ARG,
     STAT_NACK_BUSY,
     STAT_NACK_TIMEOUT,
+    pack_output_snapshot,
 )
 
 EDRAM_REQ_WRITE_ROW = 1
@@ -45,6 +49,10 @@ async def reset(dut):
     dut.edram_done_i.value = 0
     dut.edram_timeout_i.value = 0
     dut.edram_read_data_i.value = 0
+    dut.output_snapshot_i.value = 0
+    dut.output_trace_count_i.value = 0
+    dut.output_trace_snapshot_i.value = 0
+    dut.output_trace_index_valid_i.value = 0
     await ClockCycles(dut.clk_i, 3)
     dut.rst_ni.value = 1
     await ClockCycles(dut.clk_i, 2)
@@ -65,6 +73,7 @@ async def tick(dut):
         "req_group": int(dut.edram_req_group_o.value),
         "req_data": int(dut.edram_req_write_data_o.value),
         "soft_reset": int(dut.edram_soft_reset_o.value),
+        "trace_index": int(dut.output_trace_index_o.value),
     }
     await NextTimeStep()
     return sample
@@ -120,6 +129,44 @@ async def control_and_error_responses(dut):
     sample = await pulse_cmd(dut, OP_STATUS, 1)
     assert sample["resp_valid"] == 1
     assert unpack_bytes(sample["resp_data"], 2) == [0x00, 0x00]
+
+
+@cocotb.test()
+async def output_snapshot_responses_do_not_start_edram(dut):
+    cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
+    await reset(dut)
+
+    idle_snapshot = pack_args(pack_output_snapshot(1, 1, 1, 1, 0, 0, 0, 0, 0))
+    dut.output_snapshot_i.value = idle_snapshot
+    sample = await pulse_cmd(dut, OP_READ_OUTPUTS, 1)
+    assert sample["resp_valid"] == 1
+    assert sample["resp_status"] == STAT_ACK
+    assert sample["resp_op"] == OP_READ_OUTPUTS
+    assert sample["resp_len"] == 5
+    assert unpack_bytes(sample["resp_data"], 5) == pack_output_snapshot(1, 1, 1, 1, 0, 0, 0, 0, 0)
+    assert sample["req_valid"] == 0
+    await accept_response(dut)
+
+    active_snapshot = pack_output_snapshot(0, 1, 1, 1, 3, 0, 0x33, 0, 0)
+    dut.output_trace_count_i.value = 9
+    dut.output_trace_snapshot_i.value = pack_args(active_snapshot)
+    dut.output_trace_index_valid_i.value = 1
+    sample = await pulse_cmd(dut, OP_READ_OUTPUT_TRACE, 2, [3])
+    assert sample["resp_valid"] == 1
+    assert sample["resp_status"] == STAT_ACK
+    assert sample["resp_op"] == OP_READ_OUTPUT_TRACE
+    assert sample["resp_len"] == 7
+    assert sample["trace_index"] == 3
+    assert unpack_bytes(sample["resp_data"], 7) == [9, 3, *active_snapshot]
+    assert sample["req_valid"] == 0
+    await accept_response(dut)
+
+    dut.output_trace_index_valid_i.value = 0
+    sample = await pulse_cmd(dut, OP_READ_OUTPUT_TRACE, 2, [10])
+    assert sample["resp_valid"] == 1
+    assert sample["resp_status"] == STAT_NACK_BAD_ARG
+    assert sample["resp_op"] == OP_READ_OUTPUT_TRACE
+    assert sample["req_valid"] == 0
 
 
 @cocotb.test()

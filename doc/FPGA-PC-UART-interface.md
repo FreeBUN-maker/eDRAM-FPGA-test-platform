@@ -267,6 +267,78 @@ GROUP = 0, 1, 2, 3, 4, 5, 6, 7
 [AA] [04] [00] [05] [00] [00] [01]
 ```
 
+### 输出信号snapshot payload
+
+`READ_OUTPUTS`和`READ_OUTPUT_TRACE`使用同一种5 byte输出信号snapshot格式。该snapshot从FPGA顶层输出端口的驱动net采样，用于PC端检查FPGA实际正在或曾经驱动到eDRAM接口的数字信号值。
+
+| byte | bit | 内容 |
+| --- | --- | --- |
+| `S0` | `0` | `LOAD_N` |
+| `S0` | `1` | `READ_N` |
+| `S0` | `2` | `EN_WWL_N` |
+| `S0` | `3` | `EN_RWL_N` |
+| `S0` | `7:4` | Reserved，固定为`0` |
+| `S1` | `2:0` | `WG[2:0]` |
+| `S1` | `5:3` | `RG[2:0]` |
+| `S1` | `7:6` | Reserved，固定为`0` |
+| `S2` | `7:0` | `DIN[7:0]` |
+| `S3` | `5:0` | `A[5:0]` |
+| `S3` | `7:6` | Reserved，固定为`0` |
+| `S4` | `5:0` | `W[5:0]` |
+| `S4` | `7:6` | Reserved，固定为`0` |
+
+空闲状态snapshot为：
+
+```text
+[0F] [00] [00] [00] [00]
+```
+
+### `READ_OUTPUTS`
+
+读取当前eDRAM输出端口snapshot。该命令不启动eDRAM读写事务。
+
+| 项目 | 内容 |
+| --- | --- |
+| `OP` | `0x06` |
+| 请求payload | 无 |
+| 成功响应payload | `[S0] [S1] [S2] [S3] [S4]` |
+
+请求：
+
+```text
+[55] [01] [06] [07]
+```
+
+若当前输出端口为空闲状态，响应为：
+
+```text
+[AA] [07] [00] [06] [0F] [00] [00] [00] [00] [0E]
+```
+
+### `READ_OUTPUT_TRACE`
+
+读取最近一次eDRAM事务期间捕获到的输出端口trace记录。trace记录只保存控制信号处于active状态且snapshot发生变化的采样点，用于在`WRITE_ROW`完成后检查写入过程中FPGA实际驱动过的`WG`、`DIN`和行地址等信号。
+
+| 项目 | 内容 |
+| --- | --- |
+| `OP` | `0x07` |
+| 请求payload | `[INDEX]` |
+| 成功响应payload | `[COUNT] [INDEX] [S0] [S1] [S2] [S3] [S4]` |
+
+`COUNT`表示最近一次事务中可查询的trace记录数量，`INDEX`选择其中一条记录。若`INDEX >= COUNT`，FPGA返回`NACK_BAD_ARG`。
+
+请求`INDEX=0`：
+
+```text
+[55] [02] [07] [00] [05]
+```
+
+示例响应表示共有9条记录，第0条snapshot为`LOAD_N=0, WG=0, DIN=0x00`：
+
+```text
+[AA] [09] [00] [07] [09] [00] [0E] [00] [00] [00] [00] [09]
+```
+
 ## 错误处理规则
 
 1. `SOF`错误：FPGA不响应，继续等待下一个`0x55`。

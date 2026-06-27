@@ -1,6 +1,7 @@
 #ifndef SIM_TB_INCLUDE_LIBGEN_H
 #define SIM_TB_INCLUDE_LIBGEN_H
 
+#if defined(_WIN32)
 static inline char *basename(char *path)
 {
     char *base;
@@ -18,5 +19,8 @@ static inline char *basename(char *path)
 
     return (base[0] == '\0') ? (char *)"." : base;
 }
+#else
+#include_next <libgen.h>
+#endif
 
 #endif

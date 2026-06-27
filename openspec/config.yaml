@@ -13,7 +13,7 @@ context: |
   输出的RTL设计存放在src/rtl目录下，用于控制vivado配置的tcl脚本放在src/vivado目录下
   输出的文档放在doc/目录下
   输出的tb放在sim/tb目录下
-  开发环境：conda activate HW可以激活该项目的开发环境，里面包含verilator, cocotb等测试工具
+  开发环境：conda activate track4-fa可以激活该项目的开发环境，里面包含verilator, cocotb等测试工具
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.

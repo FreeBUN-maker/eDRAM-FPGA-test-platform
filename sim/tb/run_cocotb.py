@@ -8,6 +8,8 @@ import cocotb.config
 from cocotb.runner import Verilator, get_runner
 from cocotb.runner import Verilog, is_verilog_source
 
+from protocol import self_test as protocol_self_test
+
 
 ROOT = Path(__file__).resolve().parents[2]
 RTL = ROOT / "src" / "rtl"
@@ -177,9 +179,20 @@ ALL_RTL = [
     RTL / "uart_tx.sv",
     RTL / "uart_frame_parser.sv",
     RTL / "uart_resp_encoder.sv",
+    RTL / "edram_output_snapshot.sv",
     RTL / "edram_ctrl_fsm.sv",
     RTL / "cmd_dispatcher.sv",
     RTL / "edram_pl_top.sv",
+]
+
+CLOCK_RTL = [
+    RTL / "pl_clk_diff_to_single.sv",
+]
+
+BOARD_RTL = [
+    *ALL_RTL,
+    RTL / "pl_clk_diff_to_single.sv",
+    RTL / "edram_pl_board_top.sv",
 ]
 
 
@@ -223,6 +236,19 @@ def run_one(top, module, sources, parameters=None):
 
 
 def main():
+    protocol_self_test()
+    clock_params = {
+        "SIM_BYPASS": 1,
+        "INPUT_CLK_HZ": 200_000_000,
+        "OUTPUT_CLK_HZ": 100_000_000,
+        "LOCK_DELAY_CYCLES": 4,
+    }
+    run_one(
+        "pl_clk_diff_to_single",
+        "test_pl_clk_diff_to_single",
+        CLOCK_RTL,
+        clock_params,
+    )
     run_one(
         "uart_frame_parser",
         "test_uart_frame_parser",
@@ -264,6 +290,17 @@ def main():
         **timing_params,
     }
     run_one("edram_pl_top", "test_edram_pl_top", ALL_RTL, top_params)
+    board_params = {
+        "CLK_SIM_BYPASS": 1,
+        "LOCK_DELAY_CYCLES": 4,
+        **timing_params,
+    }
+    run_one(
+        "edram_pl_board_top",
+        "test_edram_pl_board_top",
+        BOARD_RTL,
+        board_params,
+    )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,10 @@
 # Git ignore file
 
+# agent prompt
+prompt.md
+
 # sim build files
 sim/build
+__pycache__/
+*.pyc
+sim/tb/results.xml

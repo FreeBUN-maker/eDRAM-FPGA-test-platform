@@ -18,10 +18,10 @@ module edram_pl_top #(
   parameter int unsigned CTRL_TIMEOUT_CYCLES   = EDRAM_CTRL_TIMEOUT_DEFAULT,
   parameter int unsigned P_SYNC_STAGES         = 2
 ) (
-  input  logic       clk_i,
-  input  logic       rst_ni,
+  input  wire logic       clk_i,
+  input  wire logic       rst_ni,
 
-  input  logic       uart_rx_i,
+  input  wire logic       uart_rx_i,
   output logic       uart_tx_o,
 
   output logic       edram_load_n_o,
@@ -33,7 +33,7 @@ module edram_pl_top #(
   output logic [7:0] edram_din_o,
   output logic [5:0] edram_a_o,
   output logic [5:0] edram_w_o,
-  input  logic [7:0] edram_p_i
+  input  wire logic [7:0] edram_p_i
 );
   logic [7:0] rx_byte;
   logic rx_byte_valid;
@@ -71,6 +71,30 @@ module edram_pl_top #(
   logic edram_soft_reset;
   logic uart_tx_busy;
   logic resp_encoder_busy;
+  logic edram_load_n;
+  logic edram_read_n;
+  logic edram_en_wwl_n;
+  logic edram_en_rwl_n;
+  logic [2:0] edram_wg;
+  logic [2:0] edram_rg;
+  logic [7:0] edram_din;
+  logic [5:0] edram_a;
+  logic [5:0] edram_w;
+  logic [EDRAM_OUTPUT_SNAPSHOT_BYTES*8-1:0] output_snapshot;
+  logic [7:0] output_trace_index;
+  logic [7:0] output_trace_count;
+  logic [EDRAM_OUTPUT_SNAPSHOT_BYTES*8-1:0] output_trace_snapshot;
+  logic output_trace_index_valid;
+
+  assign edram_load_n_o   = edram_load_n;
+  assign edram_read_n_o   = edram_read_n;
+  assign edram_en_wwl_n_o = edram_en_wwl_n;
+  assign edram_en_rwl_n_o = edram_en_rwl_n;
+  assign edram_wg_o       = edram_wg;
+  assign edram_rg_o       = edram_rg;
+  assign edram_din_o      = edram_din;
+  assign edram_a_o        = edram_a;
+  assign edram_w_o        = edram_w;
 
   uart_rx #(
     .CLK_HZ(CLK_HZ),
@@ -126,7 +150,12 @@ module edram_pl_top #(
     .edram_done_i(edram_done),
     .edram_timeout_i(edram_timeout),
     .edram_read_data_i(edram_read_data),
-    .edram_soft_reset_o(edram_soft_reset)
+    .edram_soft_reset_o(edram_soft_reset),
+    .output_snapshot_i(output_snapshot),
+    .output_trace_index_o(output_trace_index),
+    .output_trace_count_i(output_trace_count),
+    .output_trace_snapshot_i(output_trace_snapshot),
+    .output_trace_index_valid_i(output_trace_index_valid)
   );
 
   edram_ctrl_fsm #(
@@ -156,16 +185,37 @@ module edram_pl_top #(
     .timeout_o(edram_timeout),
     .read_data_o(edram_read_data),
     .busy_o(edram_busy),
-    .edram_load_n_o(edram_load_n_o),
-    .edram_read_n_o(edram_read_n_o),
-    .edram_en_wwl_n_o(edram_en_wwl_n_o),
-    .edram_en_rwl_n_o(edram_en_rwl_n_o),
-    .edram_wg_o(edram_wg_o),
-    .edram_rg_o(edram_rg_o),
-    .edram_din_o(edram_din_o),
-    .edram_a_o(edram_a_o),
-    .edram_w_o(edram_w_o),
+    .edram_load_n_o(edram_load_n),
+    .edram_read_n_o(edram_read_n),
+    .edram_en_wwl_n_o(edram_en_wwl_n),
+    .edram_en_rwl_n_o(edram_en_rwl_n),
+    .edram_wg_o(edram_wg),
+    .edram_rg_o(edram_rg),
+    .edram_din_o(edram_din),
+    .edram_a_o(edram_a),
+    .edram_w_o(edram_w),
     .edram_p_i(edram_p_i)
+  );
+
+  edram_output_snapshot u_edram_output_snapshot (
+    .clk_i(clk_i),
+    .rst_ni(rst_ni),
+    .soft_reset_i(edram_soft_reset),
+    .transaction_start_i(edram_req_valid && edram_req_ready),
+    .edram_load_n_i(edram_load_n),
+    .edram_read_n_i(edram_read_n),
+    .edram_en_wwl_n_i(edram_en_wwl_n),
+    .edram_en_rwl_n_i(edram_en_rwl_n),
+    .edram_wg_i(edram_wg),
+    .edram_rg_i(edram_rg),
+    .edram_din_i(edram_din),
+    .edram_a_i(edram_a),
+    .edram_w_i(edram_w),
+    .live_snapshot_o(output_snapshot),
+    .trace_index_i(output_trace_index),
+    .trace_count_o(output_trace_count),
+    .trace_snapshot_o(output_trace_snapshot),
+    .trace_index_valid_o(output_trace_index_valid)
   );
 
   uart_resp_encoder u_uart_resp_encoder (

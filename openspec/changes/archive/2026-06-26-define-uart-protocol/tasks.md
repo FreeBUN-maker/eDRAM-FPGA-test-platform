@@ -25,7 +25,12 @@
 
 ## 5. Host and Verification
 
-- [ ] 5.1 Add Python helper functions to build command frames and parse responses
-- [ ] 5.2 Add simulation tests for valid write/read/control frames
-- [ ] 5.3 Add simulation tests for bad checksum, bad length, unsupported opcode, and invalid arguments
-- [ ] 5.4 Verify the documented protocol examples match generated frame bytes
+- [x] 5.1 Add Python helper functions to build command frames and parse responses
+- [x] 5.2 Add simulation tests for valid write/read/control frames
+- [x] 5.3 Add simulation tests for bad checksum, bad length, unsupported opcode, and invalid arguments
+- [x] 5.4 Verify the documented protocol examples match generated frame bytes
+
+## Implementation Notes
+
+- 2026-06-26: `conda run -n track4-fa python sim/tb/protocol.py` passed and validates the documented protocol example bytes.
+- 2026-06-26: `conda run -n track4-fa python sim/tb/run_cocotb.py` passed with Verilator 5.048 and cocotb 1.9.2, including UART protocol valid/control/error-frame tests.

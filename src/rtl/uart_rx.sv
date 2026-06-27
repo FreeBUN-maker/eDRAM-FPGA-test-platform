@@ -4,9 +4,9 @@ module uart_rx #(
   parameter int unsigned CLK_HZ    = 100_000_000,
   parameter int unsigned UART_BAUD = 115200
 ) (
-  input  logic       clk_i,
-  input  logic       rst_ni,
-  input  logic       rx_i,
+  input  wire logic       clk_i,
+  input  wire logic       rst_ni,
+  input  wire logic       rx_i,
   output logic [7:0] byte_o,
   output logic       byte_valid_o,
   output logic       framing_error_o
