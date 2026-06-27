@@ -46,7 +46,7 @@ python scripts/uart_host_test.py list
 
   Linux常见端口名为 `/dev/ttyUSB0` 或 `/dev/ttyACM0`；Windows常见端口名为 `COM7` 这类 `COMx`。Linux若无权限访问串口，通常需要把当前用户加入 `dialout` 组或临时调整设备权限。
 
-`basic` 和 `smoke` 等价，`full` 和 `memtest` 等价；推荐日常使用 `basic` 与 `full` 这两个名字。
+`basic` 和 `smoke` 等价，`full` 和 `memtest` 等价；推荐日常使用 `basic`、`outputs`、`write-selfcheck` 与 `full`。
 
 ## 基础模式
 基础模式只测试 `RESET`、`PING`、`STATUS`，用于确认 `PC -> UART interface -> FPGA dispatcher -> UART interface -> PC` 的基本双向链路，不依赖eDRAM阵列读写结果。
@@ -71,8 +71,25 @@ python scripts/uart_host_test.py basic --port /dev/ttyUSB0 --verbose
 
 基础模式通过时会看到 `RESET: PASS`、`PING: PASS`、`STATUS: PASS` 和 `BASIC: PASS`。
 
+## 输出信号自检
+`outputs` 会通过 `READ_OUTPUTS` 读取当前eDRAM输出端口snapshot，用于确认FPGA顶层输出net可以经UART回传PC。复位或空闲时应看到 `LOAD_N=1 READ_N=1 EN_WWL_N=1 EN_RWL_N=1 WG=0 RG=0 DIN=0x00 A=0 W=0`。
+
+```bash
+python scripts/uart_host_test.py outputs --port /dev/ttyUSB0
+python scripts/uart_host_test.py outputs --port COM7
+```
+
+`write-selfcheck` 会写入指定scratch row，然后通过 `READ_OUTPUT_TRACE` 读取最近一次写事务期间捕获到的输出端口记录，检查 `WG`、`DIN` 和写入行地址 `A` 是否与主机意图一致。该模式会驱动一次 `WRITE_ROW`，因此只应选择允许覆盖的row。
+
+```bash
+python scripts/uart_host_test.py write-selfcheck --port /dev/ttyUSB0 --row 0 --pattern walking
+python scripts/uart_host_test.py write-selfcheck --port COM7 --row 0 --data "00 11 22 33 44 55 66 77"
+```
+
+加 `--verbose` 可以查看每条trace记录的原始snapshot byte。该自检验证的是FPGA输出端口驱动net的数字值，不等同于外部连接器上的模拟信号完整性测试。
+
 ## 完整模式
-完整模式会测试UART ISA中当前定义的所有指令：`RESET`、`PING`、`STATUS`、`WRITE_ROW`、`READ_GROUP`、`READ_ROW`。它会写入指定scratch row，再用 `READ_GROUP` 逐组读回，并用 `READ_ROW` 读取整行比较，因此只应在eDRAM板已连接且该行允许被覆盖时运行。
+完整模式会测试基本控制命令和eDRAM读写事务：`RESET`、`PING`、`STATUS`、`WRITE_ROW`、`READ_GROUP`、`READ_ROW`。它会写入指定scratch row，再用 `READ_GROUP` 逐组读回，并用 `READ_ROW` 读取整行比较，因此只应在eDRAM板已连接且该行允许被覆盖时运行。
 
 ```bash
 python scripts/uart_host_test.py full --port /dev/ttyUSB0 --row 0 --pattern walking
@@ -88,3 +105,4 @@ python scripts/uart_host_test.py full --port COM7 --row 0 --data "00 11 22 33 44
 - `FPGA returned NACK_*`：FPGA收到了frame但拒绝执行，可根据状态码检查长度、checksum、参数范围、busy或FSM timeout。
 - `payload mismatch`：`PING`或其他命令响应payload与协议不一致。
 - `READ_GROUP mismatch` 或 `READ_ROW mismatch`：UART命令通路已返回响应，但eDRAM写读数据不一致，需要继续检查eDRAM连接、时序参数或被测row。
+- `WRITE_SELFCHECK: missing trace record`：FPGA返回了写事务trace，但其中没有找到与主机意图匹配的输出信号记录，需要检查RTL输出时序或trace采样路径。

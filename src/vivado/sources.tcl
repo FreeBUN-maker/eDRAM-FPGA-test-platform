@@ -17,6 +17,7 @@ namespace eval edram_vivado {
     src/rtl/uart_tx.sv \
     src/rtl/uart_frame_parser.sv \
     src/rtl/uart_resp_encoder.sv \
+    src/rtl/edram_output_snapshot.sv \
     src/rtl/cmd_dispatcher.sv \
     src/rtl/edram_ctrl_fsm.sv \
     src/rtl/edram_pl_top.sv \

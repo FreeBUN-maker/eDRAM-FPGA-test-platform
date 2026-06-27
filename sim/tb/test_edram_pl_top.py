@@ -5,6 +5,8 @@ from cocotb.triggers import ClockCycles, FallingEdge, NextTimeStep, ReadOnly, Ri
 from protocol import (
     OP_PING,
     OP_READ_GROUP,
+    OP_READ_OUTPUTS,
+    OP_READ_OUTPUT_TRACE,
     OP_READ_ROW,
     OP_RESET,
     OP_STATUS,
@@ -17,9 +19,13 @@ from protocol import (
     build_request,
     build_response,
     corrupt_checksum,
+    decode_output_trace_payload,
     ping_frame,
+    pack_output_snapshot,
     parse_response,
     read_group_frame,
+    read_outputs_frame,
+    read_output_trace_frame,
     read_row_frame,
     reset_frame,
     status_frame,
@@ -77,6 +83,11 @@ async def recv_response(dut):
     return frame
 
 
+async def recv_parsed_response(dut):
+    frame = await recv_response(dut)
+    return parse_response(frame)
+
+
 async def edram_read_model(dut):
     while True:
         await RisingEdge(dut.clk_i)
@@ -97,6 +108,13 @@ async def assert_edram_idle(dut):
     assert int(dut.edram_a_o.value) == 0
     assert int(dut.edram_w_o.value) == 0
     await NextTimeStep()
+
+
+def find_record_after(records, start_index, predicate):
+    for index in range(start_index, len(records)):
+        if predicate(records[index]):
+            return index + 1
+    raise AssertionError("expected output trace record not found")
 
 
 @cocotb.test()
@@ -138,6 +156,88 @@ async def uart_control_frames(dut):
     await send_uart_frame(dut, reset_frame())
     frame = await recv_response(dut)
     assert frame == build_response(STAT_ACK, OP_RESET)
+    await assert_edram_idle(dut)
+
+
+@cocotb.test()
+async def uart_read_outputs_returns_idle_snapshot(dut):
+    cocotb.start_soon(Clock(dut.clk_i, 1, units="us").start())
+    await reset(dut)
+    await assert_edram_idle(dut)
+
+    await send_uart_frame(dut, read_outputs_frame())
+    frame = await recv_response(dut)
+    idle_snapshot = pack_output_snapshot(1, 1, 1, 1, 0, 0, 0, 0, 0)
+    assert frame == build_response(STAT_ACK, OP_READ_OUTPUTS, idle_snapshot)
+    await assert_edram_idle(dut)
+
+
+@cocotb.test()
+async def uart_write_row_output_trace_records_host_intent(dut):
+    cocotb.start_soon(Clock(dut.clk_i, 1, units="us").start())
+    await reset(dut)
+
+    row = 0x0C
+    row_data = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77]
+    await send_uart_frame(dut, write_row_frame(row, row_data))
+    frame = await recv_response(dut)
+    assert frame == build_response(STAT_ACK, OP_WRITE_ROW)
+
+    await send_uart_frame(dut, read_output_trace_frame(0))
+    parsed = await recv_parsed_response(dut)
+    assert parsed["status"] == STAT_ACK
+    assert parsed["op"] == OP_READ_OUTPUT_TRACE
+    first_trace = decode_output_trace_payload(parsed["data"])
+    count = first_trace["count"]
+    assert count >= 9
+    assert first_trace["index"] == 0
+
+    records = [first_trace["snapshot"]]
+    for index in range(1, count):
+        await send_uart_frame(dut, read_output_trace_frame(index))
+        parsed = await recv_parsed_response(dut)
+        assert parsed["status"] == STAT_ACK
+        trace = decode_output_trace_payload(parsed["data"])
+        assert trace["count"] == count
+        assert trace["index"] == index
+        records.append(trace["snapshot"])
+
+    search_start = 0
+    for group, expected in enumerate(row_data):
+        search_start = find_record_after(
+            records,
+            search_start,
+            lambda snapshot, group=group, expected=expected: (
+                snapshot["load_n"] == 0 and
+                snapshot["read_n"] == 1 and
+                snapshot["en_wwl_n"] == 1 and
+                snapshot["en_rwl_n"] == 1 and
+                snapshot["wg"] == group and
+                snapshot["din"] == expected
+            ),
+        )
+
+    find_record_after(
+        records,
+        search_start,
+        lambda snapshot: (
+            snapshot["load_n"] == 1 and
+            snapshot["read_n"] == 1 and
+            snapshot["en_wwl_n"] == 0 and
+            snapshot["en_rwl_n"] == 1 and
+            snapshot["a"] == row
+        ),
+    )
+
+
+@cocotb.test()
+async def uart_output_trace_bad_index_returns_nack(dut):
+    cocotb.start_soon(Clock(dut.clk_i, 1, units="us").start())
+    await reset(dut)
+
+    await send_uart_frame(dut, read_output_trace_frame(0))
+    frame = await recv_response(dut)
+    assert frame == build_response(STAT_NACK_BAD_ARG, OP_READ_OUTPUT_TRACE)
     await assert_edram_idle(dut)
 
 

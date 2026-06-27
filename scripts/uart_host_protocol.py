@@ -18,6 +18,8 @@ OP_READ_GROUP = 0x02
 OP_READ_ROW = 0x03
 OP_RESET = 0x04
 OP_STATUS = 0x05
+OP_READ_OUTPUTS = 0x06
+OP_READ_OUTPUT_TRACE = 0x07
 
 STAT_ACK = 0x00
 STAT_NACK_BAD_LEN = 0x01
@@ -32,6 +34,8 @@ PING_RESP_DATA = 0xA5
 EDRAM_ROW_COUNT = 64
 EDRAM_GROUP_COUNT = 8
 EDRAM_ROW_BYTES = 8
+EDRAM_OUTPUT_SNAPSHOT_BYTES = 5
+EDRAM_OUTPUT_TRACE_RESP_BYTES = 2 + EDRAM_OUTPUT_SNAPSHOT_BYTES
 
 OP_NAMES = {
     OP_PING: "PING",
@@ -40,6 +44,8 @@ OP_NAMES = {
     OP_READ_ROW: "READ_ROW",
     OP_RESET: "RESET",
     OP_STATUS: "STATUS",
+    OP_READ_OUTPUTS: "READ_OUTPUTS",
+    OP_READ_OUTPUT_TRACE: "READ_OUTPUT_TRACE",
 }
 
 STATUS_NAMES = {
@@ -77,6 +83,28 @@ class Response:
         return op_name(self.op)
 
 
+@dataclass(frozen=True)
+class OutputSnapshot:
+    load_n: int
+    read_n: int
+    en_wwl_n: int
+    en_rwl_n: int
+    wg: int
+    rg: int
+    din: int
+    a: int
+    w: int
+    raw: tuple[int, ...]
+
+    def summary(self) -> str:
+        return (
+            f"LOAD_N={self.load_n} READ_N={self.read_n} "
+            f"EN_WWL_N={self.en_wwl_n} EN_RWL_N={self.en_rwl_n} "
+            f"WG={self.wg} RG={self.rg} DIN=0x{self.din:02X} "
+            f"A={self.a} W={self.w}"
+        )
+
+
 def _byte(value: int, name: str = "byte") -> int:
     try:
         value = int(value)
@@ -84,6 +112,13 @@ def _byte(value: int, name: str = "byte") -> int:
         raise ValueError(f"{name} must be an integer byte") from exc
     if not 0 <= value <= 0xFF:
         raise ValueError(f"{name} out of range: {value}")
+    return value
+
+
+def _bit(value: int, name: str = "bit") -> int:
+    value = _byte(value, name)
+    if value not in (0, 1):
+        raise ValueError(f"{name} must be 0 or 1")
     return value
 
 
@@ -168,6 +203,80 @@ def read_row_frame(row: int) -> bytes:
     return build_request(OP_READ_ROW, [validate_row(row)])
 
 
+def read_outputs_frame() -> bytes:
+    return build_request(OP_READ_OUTPUTS)
+
+
+def read_output_trace_frame(index: int) -> bytes:
+    return build_request(OP_READ_OUTPUT_TRACE, [_byte(index, "trace index")])
+
+
+def pack_output_snapshot(
+    *,
+    load_n: int,
+    read_n: int,
+    en_wwl_n: int,
+    en_rwl_n: int,
+    wg: int,
+    rg: int,
+    din: int,
+    a: int,
+    w: int,
+) -> tuple[int, ...]:
+    wg = validate_group(wg)
+    rg = validate_group(rg)
+    din = _byte(din, "din")
+    a = validate_row(a)
+    w = validate_row(w)
+    s0 = (
+        _bit(load_n, "load_n") |
+        (_bit(read_n, "read_n") << 1) |
+        (_bit(en_wwl_n, "en_wwl_n") << 2) |
+        (_bit(en_rwl_n, "en_rwl_n") << 3)
+    )
+    s1 = wg | (rg << 3)
+    return (s0, s1, din, a, w)
+
+
+def decode_output_snapshot(data: Iterable[int]) -> OutputSnapshot:
+    raw = tuple(_bytes(data, "snapshot"))
+    if len(raw) != EDRAM_OUTPUT_SNAPSHOT_BYTES:
+        raise UartProtocolError(
+            f"output snapshot needs {EDRAM_OUTPUT_SNAPSHOT_BYTES} byte(s), got {len(raw)}"
+        )
+    s0, s1, din, a, w = raw
+    if s0 & 0xF0:
+        raise UartProtocolError(f"snapshot S0 reserved bits are non-zero: 0x{s0:02X}")
+    if s1 & 0xC0:
+        raise UartProtocolError(f"snapshot S1 reserved bits are non-zero: 0x{s1:02X}")
+    if a & 0xC0:
+        raise UartProtocolError(f"snapshot S3 reserved bits are non-zero: 0x{a:02X}")
+    if w & 0xC0:
+        raise UartProtocolError(f"snapshot S4 reserved bits are non-zero: 0x{w:02X}")
+    return OutputSnapshot(
+        load_n=s0 & 0x01,
+        read_n=(s0 >> 1) & 0x01,
+        en_wwl_n=(s0 >> 2) & 0x01,
+        en_rwl_n=(s0 >> 3) & 0x01,
+        wg=s1 & 0x07,
+        rg=(s1 >> 3) & 0x07,
+        din=din,
+        a=a & 0x3F,
+        w=w & 0x3F,
+        raw=raw,
+    )
+
+
+def decode_output_trace_payload(data: Iterable[int]) -> tuple[int, int, OutputSnapshot]:
+    raw = tuple(_bytes(data, "trace payload"))
+    if len(raw) != EDRAM_OUTPUT_TRACE_RESP_BYTES:
+        raise UartProtocolError(
+            f"output trace payload needs {EDRAM_OUTPUT_TRACE_RESP_BYTES} byte(s), got {len(raw)}"
+        )
+    count, index, *snapshot = raw
+    return count, index, decode_output_snapshot(snapshot)
+
+
 def parse_response(frame: Iterable[int]) -> Response:
     raw = _bytes(frame)
     if len(raw) < 3:
@@ -226,9 +335,42 @@ def self_test() -> None:
     assert read_row_frame(0x0C) == bytes([0x55, 0x02, 0x03, 0x0C, 0x0D])
     assert reset_frame() == bytes([0x55, 0x01, 0x04, 0x05])
     assert status_frame() == bytes([0x55, 0x01, 0x05, 0x04])
+    assert read_outputs_frame() == bytes([0x55, 0x01, 0x06, 0x07])
+    assert read_output_trace_frame(0x02) == bytes([0x55, 0x02, 0x07, 0x02, 0x07])
     assert build_response(STAT_ACK, OP_STATUS, [0x00, 0x00]) == bytes(
         [0xAA, 0x04, 0x00, 0x05, 0x00, 0x00, 0x01]
     )
+    idle_snapshot = pack_output_snapshot(
+        load_n=1,
+        read_n=1,
+        en_wwl_n=1,
+        en_rwl_n=1,
+        wg=0,
+        rg=0,
+        din=0,
+        a=0,
+        w=0,
+    )
+    assert idle_snapshot == (0x0F, 0x00, 0x00, 0x00, 0x00)
+    assert build_response(STAT_ACK, OP_READ_OUTPUTS, idle_snapshot) == bytes(
+        [0xAA, 0x07, 0x00, 0x06, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x0E]
+    )
+    active_snapshot = pack_output_snapshot(
+        load_n=0,
+        read_n=1,
+        en_wwl_n=1,
+        en_rwl_n=1,
+        wg=2,
+        rg=0,
+        din=0x22,
+        a=0,
+        w=0,
+    )
+    count, index, decoded = decode_output_trace_payload((9, 2, *active_snapshot))
+    assert (count, index) == (9, 2)
+    assert decoded.wg == 2
+    assert decoded.din == 0x22
+    assert decoded.load_n == 0
 
     parsed = parse_response([0xAA, 0x03, 0x00, 0x02, 0x5A, 0x5B])
     assert parsed.status == STAT_ACK

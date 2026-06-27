@@ -32,7 +32,13 @@ module cmd_dispatcher (
   input  wire logic                                      edram_done_i,
   input  wire logic                                      edram_timeout_i,
   input  wire logic [7:0]                                edram_read_data_i,
-  output logic                                      edram_soft_reset_o
+  output logic                                      edram_soft_reset_o,
+
+  input  wire logic [EDRAM_OUTPUT_SNAPSHOT_BYTES*8-1:0]  output_snapshot_i,
+  output logic [7:0]                                output_trace_index_o,
+  input  wire logic [7:0]                                output_trace_count_i,
+  input  wire logic [EDRAM_OUTPUT_SNAPSHOT_BYTES*8-1:0]  output_trace_snapshot_i,
+  input  wire logic                                      output_trace_index_valid_i
 );
   typedef enum logic [2:0] {
     DISP_IDLE,
@@ -62,6 +68,7 @@ module cmd_dispatcher (
   assign edram_req_row_o        = row_q;
   assign edram_req_group_o      = (state_q == DISP_ISSUE_READ_ROW) ? read_idx_q : group_q;
   assign edram_req_write_data_o = write_data_q;
+  assign output_trace_index_o   = cmd_args_i[7:0];
 
   function automatic logic [UART_RESP_MAX_DATA*8-1:0] payload1(
       input logic [7:0] b0
@@ -77,6 +84,24 @@ module cmd_dispatcher (
     payload2          = '0;
     payload2[7:0]     = b0;
     payload2[15:8]    = b1;
+  endfunction
+
+  function automatic logic [UART_RESP_MAX_DATA*8-1:0] payload_snapshot(
+      input logic [EDRAM_OUTPUT_SNAPSHOT_BYTES*8-1:0] snapshot
+  );
+    payload_snapshot = '0;
+    payload_snapshot[EDRAM_OUTPUT_SNAPSHOT_BYTES*8-1:0] = snapshot;
+  endfunction
+
+  function automatic logic [UART_RESP_MAX_DATA*8-1:0] payload_trace(
+      input logic [7:0] count,
+      input logic [7:0] index,
+      input logic [EDRAM_OUTPUT_SNAPSHOT_BYTES*8-1:0] snapshot
+  );
+    payload_trace = '0;
+    payload_trace[7:0] = count;
+    payload_trace[15:8] = index;
+    payload_trace[16 +: EDRAM_OUTPUT_SNAPSHOT_BYTES*8] = snapshot;
   endfunction
 
   function automatic logic [UART_RESP_MAX_DATA*8-1:0] with_byte(
@@ -157,6 +182,32 @@ module cmd_dispatcher (
                     4'd2,
                     payload2({7'd0, edram_busy_i}, last_err_q)
                   );
+                end
+
+                OP_READ_OUTPUTS: begin
+                  queue_response(
+                    STAT_ACK,
+                    OP_READ_OUTPUTS,
+                    4'(EDRAM_OUTPUT_SNAPSHOT_BYTES),
+                    payload_snapshot(output_snapshot_i)
+                  );
+                end
+
+                OP_READ_OUTPUT_TRACE: begin
+                  if (!output_trace_index_valid_i) begin
+                    queue_response(STAT_NACK_BAD_ARG, OP_READ_OUTPUT_TRACE, 4'd0, '0);
+                  end else begin
+                    queue_response(
+                      STAT_ACK,
+                      OP_READ_OUTPUT_TRACE,
+                      4'(EDRAM_OUTPUT_TRACE_RESP_BYTES),
+                      payload_trace(
+                        output_trace_count_i,
+                        cmd_args_i[7:0],
+                        output_trace_snapshot_i
+                      )
+                    );
+                  end
                 end
 
                 OP_WRITE_ROW: begin

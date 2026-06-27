@@ -179,6 +179,7 @@ ALL_RTL = [
     RTL / "uart_tx.sv",
     RTL / "uart_frame_parser.sv",
     RTL / "uart_resp_encoder.sv",
+    RTL / "edram_output_snapshot.sv",
     RTL / "edram_ctrl_fsm.sv",
     RTL / "cmd_dispatcher.sv",
     RTL / "edram_pl_top.sv",

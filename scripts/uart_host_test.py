@@ -12,7 +12,10 @@ import uart_host_protocol as proto
 
 
 INSTALL_HINT = "pyserial is required for hardware UART tests. Install it with: python -m pip install pyserial"
-MAX_RESPONSE_BODY_LEN = 2 + proto.EDRAM_ROW_BYTES
+MAX_RESPONSE_BODY_LEN = max(
+    2 + proto.EDRAM_ROW_BYTES,
+    2 + proto.EDRAM_OUTPUT_TRACE_RESP_BYTES,
+)
 
 
 class HostTestError(RuntimeError):
@@ -246,6 +249,10 @@ def decode_status_payload(data: Sequence[int]) -> str:
     )
 
 
+def format_snapshot(snapshot: proto.OutputSnapshot) -> str:
+    return f"{snapshot.summary()} raw={proto.format_bytes(snapshot.raw)}"
+
+
 def run_basic_sequence(port, args, final_label: str = "BASIC") -> proto.Response:
     print(f"Running {final_label.lower()} UART test on {args.port} at {args.baud} baud")
     exchange(port, proto.OP_RESET, proto.reset_frame(), args, expected_data=())
@@ -314,6 +321,132 @@ def run_status(args) -> int:
             expected_data_len=2,
         )
         print(f"STATUS: PASS {decode_status_payload(status.data)}")
+    finally:
+        port.close()
+    return 0
+
+
+def run_outputs(args) -> int:
+    port = open_serial(args)
+    try:
+        response = exchange(
+            port,
+            proto.OP_READ_OUTPUTS,
+            proto.read_outputs_frame(),
+            args,
+            expected_data_len=proto.EDRAM_OUTPUT_SNAPSHOT_BYTES,
+        )
+        snapshot = proto.decode_output_snapshot(response.data)
+        print(f"OUTPUTS: PASS {format_snapshot(snapshot)}")
+    finally:
+        port.close()
+    return 0
+
+
+def read_output_trace_record(port, args, index: int) -> tuple[int, int, proto.OutputSnapshot]:
+    response = exchange(
+        port,
+        proto.OP_READ_OUTPUT_TRACE,
+        proto.read_output_trace_frame(index),
+        args,
+        expected_data_len=proto.EDRAM_OUTPUT_TRACE_RESP_BYTES,
+    )
+    count, returned_index, snapshot = proto.decode_output_trace_payload(response.data)
+    if returned_index != index:
+        raise HostTestError(
+            f"READ_OUTPUT_TRACE: returned index {returned_index}, expected {index}"
+        )
+    return count, returned_index, snapshot
+
+
+def collect_output_trace(port, args) -> list[proto.OutputSnapshot]:
+    count, _, first_snapshot = read_output_trace_record(port, args, 0)
+    if count <= 0:
+        raise HostTestError("READ_OUTPUT_TRACE: FPGA reported zero trace records")
+    if count > 64:
+        raise HostTestError(f"READ_OUTPUT_TRACE: unreasonable trace count {count}")
+
+    records = [first_snapshot]
+    for index in range(1, count):
+        next_count, _, snapshot = read_output_trace_record(port, args, index)
+        if next_count != count:
+            raise HostTestError(
+                f"READ_OUTPUT_TRACE: count changed from {count} to {next_count}"
+            )
+        records.append(snapshot)
+    return records
+
+
+def require_ordered_snapshot(
+    records: Sequence[proto.OutputSnapshot],
+    start_index: int,
+    label: str,
+    predicate,
+) -> int:
+    for index in range(start_index, len(records)):
+        if predicate(records[index]):
+            return index + 1
+    raise HostTestError(f"WRITE_SELFCHECK: missing trace record for {label}")
+
+
+def verify_write_trace(
+    records: Sequence[proto.OutputSnapshot],
+    row: int,
+    data: Sequence[int],
+) -> None:
+    search_start = 0
+    for group, expected in enumerate(data):
+        search_start = require_ordered_snapshot(
+            records,
+            search_start,
+            f"group {group} DIN=0x{expected:02X}",
+            lambda snapshot, group=group, expected=expected: (
+                snapshot.load_n == 0 and
+                snapshot.read_n == 1 and
+                snapshot.en_wwl_n == 1 and
+                snapshot.en_rwl_n == 1 and
+                snapshot.wg == group and
+                snapshot.din == expected
+            ),
+        )
+
+    require_ordered_snapshot(
+        records,
+        search_start,
+        f"row-write A={row}",
+        lambda snapshot: (
+            snapshot.load_n == 1 and
+            snapshot.read_n == 1 and
+            snapshot.en_wwl_n == 0 and
+            snapshot.en_rwl_n == 1 and
+            snapshot.a == row
+        ),
+    )
+
+
+def run_write_selfcheck(args) -> int:
+    row = proto.validate_row(args.row)
+    data = pattern_bytes(row, args.pattern, args.data)
+
+    port = open_serial(args)
+    try:
+        print(
+            f"WRITE_SELFCHECK: row={row} pattern={args.pattern} "
+            f"data={proto.format_bytes(data)}"
+        )
+        exchange(port, proto.OP_RESET, proto.reset_frame(), args, expected_data=())
+        print("RESET: PASS")
+
+        exchange(port, proto.OP_WRITE_ROW, proto.write_row_frame(row, data), args, expected_data=())
+        print("WRITE_ROW: PASS")
+
+        records = collect_output_trace(port, args)
+        if args.verbose:
+            for index, snapshot in enumerate(records):
+                print(f"TRACE {index}: {format_snapshot(snapshot)}")
+
+        verify_write_trace(records, row, data)
+        print(f"WRITE_SELFCHECK: PASS trace_records={len(records)}")
     finally:
         port.close()
     return 0
@@ -427,6 +560,36 @@ def build_parser() -> argparse.ArgumentParser:
     status_parser = subparsers.add_parser("status", help="Run a STATUS transaction")
     add_serial_args(status_parser)
     status_parser.set_defaults(func=run_status)
+
+    outputs_parser = subparsers.add_parser(
+        "outputs",
+        help="Read the live eDRAM output-port snapshot over UART",
+    )
+    add_serial_args(outputs_parser)
+    outputs_parser.set_defaults(func=run_outputs)
+
+    write_selfcheck_parser = subparsers.add_parser(
+        "write-selfcheck",
+        help="Write a row and verify FPGA output-port trace records against the requested pattern",
+    )
+    add_serial_args(write_selfcheck_parser)
+    write_selfcheck_parser.add_argument(
+        "--row",
+        type=parse_int,
+        required=True,
+        help="Scratch eDRAM row to overwrite, 0..63",
+    )
+    write_selfcheck_parser.add_argument(
+        "--pattern",
+        choices=("doc", "walking", "checker", "inverse-checker", "increment", "zero", "ones"),
+        default="doc",
+        help="Generated 8-byte write pattern",
+    )
+    write_selfcheck_parser.add_argument(
+        "--data",
+        help="Explicit 8-byte pattern, e.g. '00 11 22 33 44 55 66 77' or 0011223344556677",
+    )
+    write_selfcheck_parser.set_defaults(func=run_write_selfcheck)
 
     for name in ("full", "memtest"):
         mode_parser = subparsers.add_parser(

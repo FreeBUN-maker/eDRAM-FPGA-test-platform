@@ -15,6 +15,8 @@ package edram_pkg;
   localparam logic [7:0] OP_READ_ROW   = 8'h03;
   localparam logic [7:0] OP_RESET      = 8'h04;
   localparam logic [7:0] OP_STATUS     = 8'h05;
+  localparam logic [7:0] OP_READ_OUTPUTS      = 8'h06;
+  localparam logic [7:0] OP_READ_OUTPUT_TRACE = 8'h07;
 
   localparam logic [7:0] STAT_ACK          = 8'h00;
   localparam logic [7:0] STAT_NACK_BAD_LEN = 8'h01;
@@ -29,6 +31,10 @@ package edram_pkg;
   localparam int unsigned EDRAM_ROW_COUNT   = 64;
   localparam int unsigned EDRAM_GROUP_COUNT = 8;
   localparam int unsigned EDRAM_ROW_BYTES   = 8;
+  localparam int unsigned EDRAM_OUTPUT_SNAPSHOT_BYTES = 5;
+  localparam int unsigned EDRAM_OUTPUT_TRACE_RESP_BYTES =
+      2 + EDRAM_OUTPUT_SNAPSHOT_BYTES;
+  localparam int unsigned EDRAM_OUTPUT_TRACE_DEPTH_DEFAULT = 16;
 
   typedef enum logic [1:0] {
     EDRAM_REQ_NONE       = 2'd0,
@@ -56,6 +62,8 @@ package edram_pkg;
       OP_READ_ROW:   uart_expected_len = 8'd2;
       OP_RESET:      uart_expected_len = 8'd1;
       OP_STATUS:     uart_expected_len = 8'd1;
+      OP_READ_OUTPUTS:      uart_expected_len = 8'd1;
+      OP_READ_OUTPUT_TRACE: uart_expected_len = 8'd2;
       default:       uart_expected_len = 8'd0;
     endcase
   endfunction
