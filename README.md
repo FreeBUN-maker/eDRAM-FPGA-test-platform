@@ -23,8 +23,10 @@
 - 默认流程会创建工程、加入 RTL、加载 `src/vivado/edram_pl_board.xdc`、运行 Vivado xsim smoke 仿真、综合、实现并生成 bitstream。
 - 详细用法见 `doc/Vivado-project-mode-flow.md`。
 
-# 主机端UART通信测试
-- Python脚本入口为 `scripts/uart_host_test.py`，协议frame构造和解析 helper 为 `scripts/uart_host_protocol.py`。
+# 主机端UART通信
+- 直接发送单条UART命令的入口为 `scripts/uart_cmd.py`。
+- 测试和自检流程入口为 `scripts/uart_host_test.py`。
+- 协议frame构造和解析 helper 为 `scripts/uart_host_protocol.py`。
 - 硬件串口访问依赖 `pyserial`。在项目环境中安装：
 
 ```bash
@@ -41,12 +43,47 @@ python scripts/uart_host_protocol.py
 - 查找主机串口：
 
 ```bash
+python scripts/uart_cmd.py list
 python scripts/uart_host_test.py list
 ```
 
   Linux常见端口名为 `/dev/ttyUSB0` 或 `/dev/ttyACM0`；Windows常见端口名为 `COM7` 这类 `COMx`。Linux若无权限访问串口，通常需要把当前用户加入 `dialout` 组或临时调整设备权限。
 
-`basic` 和 `smoke` 等价，`full` 和 `memtest` 等价；推荐日常使用 `basic`、`outputs`、`write-selfcheck` 与 `full`。
+## 直接发送UART命令
+`scripts/uart_cmd.py` 用于从命令行发送一条当前协议中的UART命令，并打印该命令的响应结果。常用参数：
+
+- `--port`：主机串口，例如 `/dev/ttyUSB0` 或 `COM7`。
+- `--baud`：波特率，默认 `115200`。
+- `--timeout`：单条命令超时时间，默认 `1.0` 秒。
+- `--verbose`：打印原始TX/RX frame。
+- `--json`：输出JSON，便于脚本解析。
+- `--allow-nack`：仅用于 `raw`，把FPGA返回的NACK作为可显示诊断结果而不是直接失败。
+
+示例：
+
+```bash
+python scripts/uart_cmd.py ping --port /dev/ttyUSB0
+python scripts/uart_cmd.py status --port /dev/ttyUSB0 --json
+python scripts/uart_cmd.py read-row --port /dev/ttyUSB0 --row 12
+python scripts/uart_cmd.py read-group --port /dev/ttyUSB0 --row 12 --group 3
+python scripts/uart_cmd.py write-row --port /dev/ttyUSB0 --row 12 --data "00 11 22 33 44 55 66 77"
+python scripts/uart_cmd.py outputs --port /dev/ttyUSB0 --verbose
+python scripts/uart_cmd.py trace --port /dev/ttyUSB0 --index 0
+python scripts/uart_cmd.py raw --port /dev/ttyUSB0 --op 0x05
+python scripts/uart_cmd.py raw --port /dev/ttyUSB0 --op 0x99 --allow-nack
+```
+
+Windows示例：
+
+```bash
+python scripts/uart_cmd.py ping --port COM7
+python scripts/uart_cmd.py write-row --port COM7 --row 12 --pattern walking
+```
+
+命令成功时会看到类似 `PING ACK payload=A5`、`STATUS ACK busy=0 ...`、`READ_ROW ACK row=12 data=...` 或 `OUTPUTS ACK LOAD_N=...` 的输出。`--json` 会返回包含 `status`、`status_name`、`op`、`op_name`、`data_hex`、`raw_tx_hex` 和 `raw_rx_hex` 的JSON对象。
+
+## UART测试与自检流程
+`scripts/uart_host_test.py` 用于运行组合测试和自检流程。`basic` 和 `smoke` 等价，`full` 和 `memtest` 等价；推荐日常使用 `basic`、`outputs`、`write-selfcheck` 与 `full`。
 
 ## 基础模式
 基础模式只测试 `RESET`、`PING`、`STATUS`，用于确认 `PC -> UART interface -> FPGA dispatcher -> UART interface -> PC` 的基本双向链路，不依赖eDRAM阵列读写结果。
@@ -101,7 +138,9 @@ python scripts/uart_host_test.py full --port COM7 --row 0 --data "00 11 22 33 44
 完整模式通过时会看到 `WRITE_ROW: PASS`、`READ_GROUP: PASS groups=0..7`、`READ_ROW: PASS` 和 `FULL: PASS`。
 
 常见失败含义：
+- `row out of range`、`group out of range` 或 `--data needs exactly 8 byte(s)`：命令参数无效，脚本会在打开串口前失败。
 - `timed out`：串口端口、波特率、板卡供电、bitstream或UART管脚连接可能不正确。
+- `malformed response`：收到了响应frame，但SOF、LEN或checksum不符合协议。
 - `FPGA returned NACK_*`：FPGA收到了frame但拒绝执行，可根据状态码检查长度、checksum、参数范围、busy或FSM timeout。
 - `payload mismatch`：`PING`或其他命令响应payload与协议不一致。
 - `READ_GROUP mismatch` 或 `READ_ROW mismatch`：UART命令通路已返回响应，但eDRAM写读数据不一致，需要继续检查eDRAM连接、时序参数或被测row。

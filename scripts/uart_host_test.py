@@ -9,40 +9,11 @@ import time
 from typing import Sequence
 
 import uart_host_protocol as proto
+import uart_serial_transport as uart_io
 
 
-INSTALL_HINT = "pyserial is required for hardware UART tests. Install it with: python -m pip install pyserial"
-MAX_RESPONSE_BODY_LEN = max(
-    2 + proto.EDRAM_ROW_BYTES,
-    2 + proto.EDRAM_OUTPUT_TRACE_RESP_BYTES,
-)
-
-
-class HostTestError(RuntimeError):
-    """Raised for user-facing UART host test failures."""
-
-
-class SerialTimeoutError(HostTestError):
-    """Raised when a serial read times out."""
-
-
-def require_serial():
-    try:
-        import serial  # type: ignore
-    except ModuleNotFoundError as exc:
-        if exc.name == "serial":
-            raise HostTestError(INSTALL_HINT) from exc
-        raise
-    return serial
-
-
-def require_list_ports():
-    require_serial()
-    try:
-        from serial.tools import list_ports  # type: ignore
-    except ModuleNotFoundError as exc:
-        raise HostTestError(INSTALL_HINT) from exc
-    return list_ports
+HostTestError = uart_io.UartTransportError
+SerialTimeoutError = uart_io.SerialTimeoutError
 
 
 def parse_int(value: str) -> int:
@@ -105,84 +76,7 @@ def pattern_bytes(row: int, pattern: str, data_text: str | None) -> tuple[int, .
 
 
 def open_serial(args):
-    if args.baud <= 0:
-        raise HostTestError("--baud must be greater than 0")
-    if args.timeout <= 0:
-        raise HostTestError("--timeout must be greater than 0")
-
-    serial = require_serial()
-    try:
-        port = serial.Serial(
-            port=args.port,
-            baudrate=args.baud,
-            bytesize=serial.EIGHTBITS,
-            parity=serial.PARITY_NONE,
-            stopbits=serial.STOPBITS_ONE,
-            timeout=args.timeout,
-            write_timeout=args.timeout,
-        )
-    except Exception as exc:
-        raise HostTestError(f"failed to open serial port {args.port!r}: {exc}") from exc
-
-    if getattr(args, "drain", True):
-        try:
-            port.reset_input_buffer()
-            port.reset_output_buffer()
-        except Exception as exc:
-            port.close()
-            raise HostTestError(f"failed to drain serial port {args.port!r}: {exc}") from exc
-    return port
-
-
-def read_exact(port, count: int, deadline: float, context: str) -> bytes:
-    data = bytearray()
-    while len(data) < count:
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            raise SerialTimeoutError(
-                f"{context}: timed out while reading {count} byte(s), got {len(data)}"
-            )
-        port.timeout = remaining
-        try:
-            chunk = port.read(count - len(data))
-        except Exception as exc:
-            raise HostTestError(f"{context}: serial read failed: {exc}") from exc
-        if not chunk:
-            raise SerialTimeoutError(
-                f"{context}: timed out while reading {count} byte(s), got {len(data)}"
-            )
-        data.extend(chunk)
-    return bytes(data)
-
-
-def read_response(port, command_name: str, timeout: float, verbose: bool) -> proto.Response:
-    deadline = time.monotonic() + timeout
-    dropped = bytearray()
-
-    while True:
-        byte = read_exact(port, 1, deadline, f"{command_name} response SOF")
-        if byte[0] == proto.SOF_RESP:
-            break
-        dropped.extend(byte)
-
-    length = read_exact(port, 1, deadline, f"{command_name} response length")[0]
-    if length > MAX_RESPONSE_BODY_LEN:
-        raise HostTestError(
-            f"{command_name}: response LEN={length} exceeds protocol maximum {MAX_RESPONSE_BODY_LEN}"
-        )
-
-    rest = read_exact(port, length + 1, deadline, f"{command_name} response body/checksum")
-    frame = bytes([proto.SOF_RESP, length]) + rest
-
-    if verbose and dropped:
-        print(f"{command_name}: dropped before SOF_R: {proto.format_bytes(dropped)}")
-
-    try:
-        return proto.parse_response(frame)
-    except proto.UartProtocolError as exc:
-        raise HostTestError(
-            f"{command_name}: malformed response {proto.format_bytes(frame)}: {exc}"
-        ) from exc
+    return uart_io.open_serial(uart_io.config_from_args(args))
 
 
 def exchange(
@@ -194,45 +88,15 @@ def exchange(
     expected_data: Sequence[int] | None = None,
     expected_data_len: int | None = None,
 ) -> proto.Response:
-    command_name = proto.op_name(op)
-    if args.verbose:
-        print(f"TX {command_name}: {proto.format_bytes(frame)}")
-
-    try:
-        written = port.write(frame)
-        port.flush()
-    except Exception as exc:
-        raise HostTestError(f"{command_name}: serial write failed: {exc}") from exc
-    if written != len(frame):
-        raise HostTestError(f"{command_name}: wrote {written} byte(s), expected {len(frame)}")
-
-    response = read_response(port, command_name, args.timeout, args.verbose)
-    if args.verbose:
-        print(f"RX {command_name}: {proto.format_bytes(response.raw)}")
-
-    if response.op != op:
-        raise HostTestError(
-            f"{command_name}: unexpected OP_ECHO {response.op_name} "
-            f"(0x{response.op:02X}), expected {command_name}"
-        )
-
-    if response.status != proto.STAT_ACK:
-        payload = proto.format_bytes(response.data) if response.data else "<empty>"
-        raise HostTestError(f"{command_name}: FPGA returned {response.status_name}, payload={payload}")
-
-    if expected_data_len is not None and len(response.data) != expected_data_len:
-        raise HostTestError(
-            f"{command_name}: payload length mismatch, expected {expected_data_len}, "
-            f"got {len(response.data)} ({proto.format_bytes(response.data)})"
-        )
-
-    if expected_data is not None and tuple(response.data) != tuple(expected_data):
-        raise HostTestError(
-            f"{command_name}: payload mismatch, expected {proto.format_bytes(expected_data)}, "
-            f"got {proto.format_bytes(response.data)}"
-        )
-
-    return response
+    return uart_io.exchange(
+        port,
+        op,
+        frame,
+        timeout=args.timeout,
+        verbose=args.verbose,
+        expected_data=expected_data,
+        expected_data_len=expected_data_len,
+    )
 
 
 def decode_status_payload(data: Sequence[int]) -> str:
@@ -512,8 +376,7 @@ def run_full(args) -> int:
 
 
 def run_list(args) -> int:
-    list_ports = require_list_ports()
-    ports = sorted(list_ports.comports(), key=lambda item: item.device)
+    ports = uart_io.list_serial_ports()
     if not ports:
         print("No serial ports found.")
         return 0
