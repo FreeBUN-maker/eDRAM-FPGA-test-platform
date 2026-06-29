@@ -114,7 +114,7 @@
   ],
   "pin_mapping": {
     "default_iostandard": "LVCMOS33",
-    "edram_policy": "Map eDRAM output controls and address/data buses to J16 pins 3-32 in top-level signal order; map edram_p_i[7:0] to J15 pins 3-10.",
+    "edram_policy": "Map EN-WWL/A[5:0] to J15 even pins 4-16, EN-RWL/W[5:0] to J15 even pins 20-32, LOAD/WG[2:0]/DIN[7:0] to J16 even pins 4-26, and READ/RG[2:0]/P[7:0] to J16 odd pins 3-25.",
     "uart_policy": "Use the dedicated PL USB-UART signals from AXU5EVB-E manual page 40.",
     "reset_policy": "Use PL_KEY1 from AXU5EVB-E manual page 48 as the active-low top-level reset input."
   },
@@ -197,14 +197,14 @@
       "role": "edram_control",
       "active_low": true,
       "iostandard": "LVCMOS33",
-      "package_pin": "B10",
+      "package_pin": "C11",
       "xdc_ports": [
         "edram_load_n_o"
       ],
       "package_pin_status": "confirmed",
       "board_connector": "J16",
-      "board_pin": 3,
-      "board_signal": "B45_L9_N",
+      "board_pin": 4,
+      "board_signal": "B45_L9_P",
       "manual_page": 41
     },
     {
@@ -214,14 +214,14 @@
       "role": "edram_control",
       "active_low": true,
       "iostandard": "LVCMOS33",
-      "package_pin": "C11",
+      "package_pin": "B10",
       "xdc_ports": [
         "edram_read_n_o"
       ],
       "package_pin_status": "confirmed",
       "board_connector": "J16",
-      "board_pin": 4,
-      "board_signal": "B45_L9_P",
+      "board_pin": 3,
+      "board_signal": "B45_L9_N",
       "manual_page": 41
     },
     {
@@ -231,15 +231,15 @@
       "role": "edram_control",
       "active_low": true,
       "iostandard": "LVCMOS33",
-      "package_pin": "F10",
+      "package_pin": "AF11",
       "xdc_ports": [
         "edram_en_wwl_n_o"
       ],
       "package_pin_status": "confirmed",
-      "board_connector": "J16",
-      "board_pin": 5,
-      "board_signal": "B45_L5_N",
-      "manual_page": 41
+      "board_connector": "J15",
+      "board_pin": 4,
+      "board_signal": "B43_L2_P",
+      "manual_page": 42
     },
     {
       "name": "edram_en_rwl_n_o",
@@ -248,15 +248,15 @@
       "role": "edram_control",
       "active_low": true,
       "iostandard": "LVCMOS33",
-      "package_pin": "G11",
+      "package_pin": "AE15",
       "xdc_ports": [
         "edram_en_rwl_n_o"
       ],
       "package_pin_status": "confirmed",
-      "board_connector": "J16",
-      "board_pin": 6,
-      "board_signal": "B45_L5_P",
-      "manual_page": 41
+      "board_connector": "J15",
+      "board_pin": 20,
+      "board_signal": "B44_L1_P",
+      "manual_page": 42
     },
     {
       "name": "edram_wg_o",
@@ -265,9 +265,9 @@
       "role": "edram_write_group",
       "iostandard": "LVCMOS33",
       "package_pins": [
-        "C12",
+        "G11",
         "D12",
-        "A11"
+        "A12"
       ],
       "xdc_ports": [
         "edram_wg_o[0]",
@@ -279,9 +279,9 @@
         {
           "index": 0,
           "connector": "J16",
-          "pin": 7,
-          "signal": "B45_L12_N",
-          "package_pin": "C12",
+          "pin": 6,
+          "signal": "B45_L5_P",
+          "package_pin": "G11",
           "manual_page": 41
         },
         {
@@ -295,9 +295,9 @@
         {
           "index": 2,
           "connector": "J16",
-          "pin": 9,
-          "signal": "B45_L11_N",
-          "package_pin": "A11",
+          "pin": 10,
+          "signal": "B45_L11_P",
+          "package_pin": "A12",
           "manual_page": 41
         }
       ]
@@ -309,9 +309,9 @@
       "role": "edram_read_group",
       "iostandard": "LVCMOS33",
       "package_pins": [
-        "A12",
-        "F11",
-        "F12"
+        "F10",
+        "C12",
+        "A11"
       ],
       "xdc_ports": [
         "edram_rg_o[0]",
@@ -323,25 +323,25 @@
         {
           "index": 0,
           "connector": "J16",
-          "pin": 10,
-          "signal": "B45_L11_P",
-          "package_pin": "A12",
+          "pin": 5,
+          "signal": "B45_L5_N",
+          "package_pin": "F10",
           "manual_page": 41
         },
         {
           "index": 1,
           "connector": "J16",
-          "pin": 11,
-          "signal": "B45_L6_N",
-          "package_pin": "F11",
+          "pin": 7,
+          "signal": "B45_L12_N",
+          "package_pin": "C12",
           "manual_page": 41
         },
         {
           "index": 2,
           "connector": "J16",
-          "pin": 12,
-          "signal": "B45_L6_P",
-          "package_pin": "F12",
+          "pin": 9,
+          "signal": "B45_L11_N",
+          "package_pin": "A11",
           "manual_page": 41
         }
       ]
@@ -353,14 +353,14 @@
       "role": "edram_write_data",
       "iostandard": "LVCMOS33",
       "package_pins": [
-        "E13",
+        "F12",
         "E14",
-        "A13",
         "B13",
-        "A14",
         "B14",
-        "C13",
-        "C14"
+        "C14",
+        "L14",
+        "J12",
+        "K14"
       ],
       "xdc_ports": [
         "edram_din_o[0]",
@@ -377,9 +377,9 @@
         {
           "index": 0,
           "connector": "J16",
-          "pin": 13,
-          "signal": "B46_L6_N",
-          "package_pin": "E13",
+          "pin": 12,
+          "signal": "B45_L6_P",
+          "package_pin": "F12",
           "manual_page": 41
         },
         {
@@ -393,29 +393,13 @@
         {
           "index": 2,
           "connector": "J16",
-          "pin": 15,
-          "signal": "B46_L3_N",
-          "package_pin": "A13",
-          "manual_page": 41
-        },
-        {
-          "index": 3,
-          "connector": "J16",
           "pin": 16,
           "signal": "B46_L3_P",
           "package_pin": "B13",
           "manual_page": 41
         },
         {
-          "index": 4,
-          "connector": "J16",
-          "pin": 17,
-          "signal": "B46_L2_N",
-          "package_pin": "A14",
-          "manual_page": 41
-        },
-        {
-          "index": 5,
+          "index": 3,
           "connector": "J16",
           "pin": 18,
           "signal": "B46_L2_P",
@@ -423,19 +407,35 @@
           "manual_page": 41
         },
         {
+          "index": 4,
+          "connector": "J16",
+          "pin": 20,
+          "signal": "B46_L4_P",
+          "package_pin": "C14",
+          "manual_page": 41
+        },
+        {
+          "index": 5,
+          "connector": "J16",
+          "pin": 22,
+          "signal": "B46_L12_P",
+          "package_pin": "L14",
+          "manual_page": 41
+        },
+        {
           "index": 6,
           "connector": "J16",
-          "pin": 19,
-          "signal": "B46_L4_N",
-          "package_pin": "C13",
+          "pin": 24,
+          "signal": "B45_L4_P",
+          "package_pin": "J12",
           "manual_page": 41
         },
         {
           "index": 7,
           "connector": "J16",
-          "pin": 20,
-          "signal": "B46_L4_P",
-          "package_pin": "C14",
+          "pin": 26,
+          "signal": "B46_L11_P",
+          "package_pin": "K14",
           "manual_page": 41
         }
       ]
@@ -447,12 +447,12 @@
       "role": "edram_write_row",
       "iostandard": "LVCMOS33",
       "package_pins": [
-        "L13",
-        "L14",
-        "H12",
-        "J12",
-        "J14",
-        "K14"
+        "AB15",
+        "W14",
+        "W12",
+        "W10",
+        "AB10",
+        "AG13"
       ],
       "xdc_ports": [
         "edram_a_o[0]",
@@ -466,51 +466,51 @@
       "board_pins": [
         {
           "index": 0,
-          "connector": "J16",
-          "pin": 21,
-          "signal": "B46_L12_N",
-          "package_pin": "L13",
-          "manual_page": 41
+          "connector": "J15",
+          "pin": 6,
+          "signal": "B44_L8_P",
+          "package_pin": "AB15",
+          "manual_page": 42
         },
         {
           "index": 1,
-          "connector": "J16",
-          "pin": 22,
-          "signal": "B46_L12_P",
-          "package_pin": "L14",
-          "manual_page": 41
+          "connector": "J15",
+          "pin": 8,
+          "signal": "B44_L9_P",
+          "package_pin": "W14",
+          "manual_page": 42
         },
         {
           "index": 2,
-          "connector": "J16",
-          "pin": 23,
-          "signal": "B45_L4_N",
-          "package_pin": "H12",
-          "manual_page": 41
+          "connector": "J15",
+          "pin": 10,
+          "signal": "B44_L11_P",
+          "package_pin": "W12",
+          "manual_page": 42
         },
         {
           "index": 3,
-          "connector": "J16",
-          "pin": 24,
-          "signal": "B45_L4_P",
-          "package_pin": "J12",
-          "manual_page": 41
+          "connector": "J15",
+          "pin": 12,
+          "signal": "B43_L10_P",
+          "package_pin": "W10",
+          "manual_page": 42
         },
         {
           "index": 4,
-          "connector": "J16",
-          "pin": 25,
-          "signal": "B46_L11_N",
-          "package_pin": "J14",
-          "manual_page": 41
+          "connector": "J15",
+          "pin": 14,
+          "signal": "B43_L12_P",
+          "package_pin": "AB10",
+          "manual_page": 42
         },
         {
           "index": 5,
-          "connector": "J16",
-          "pin": 26,
-          "signal": "B46_L11_P",
-          "package_pin": "K14",
-          "manual_page": 41
+          "connector": "J15",
+          "pin": 16,
+          "signal": "B44_L3_P",
+          "package_pin": "AG13",
+          "manual_page": 42
         }
       ]
     },
@@ -521,12 +521,12 @@
       "role": "edram_read_row",
       "iostandard": "LVCMOS33",
       "package_pins": [
-        "H13",
-        "H14",
-        "F13",
-        "G13",
-        "G14",
-        "G15"
+        "AD15",
+        "AC14",
+        "Y14",
+        "AG14",
+        "AB11",
+        "AD11"
       ],
       "xdc_ports": [
         "edram_w_o[0]",
@@ -540,51 +540,51 @@
       "board_pins": [
         {
           "index": 0,
-          "connector": "J16",
-          "pin": 27,
-          "signal": "B46_L10_N",
-          "package_pin": "H13",
-          "manual_page": 41
+          "connector": "J15",
+          "pin": 22,
+          "signal": "B44_L5_P",
+          "package_pin": "AD15",
+          "manual_page": 42
         },
         {
           "index": 1,
-          "connector": "J16",
-          "pin": 28,
-          "signal": "B46_L10_P",
-          "package_pin": "H14",
-          "manual_page": 41
+          "connector": "J15",
+          "pin": 24,
+          "signal": "B44_L6_P",
+          "package_pin": "AC14",
+          "manual_page": 42
         },
         {
           "index": 2,
-          "connector": "J16",
-          "pin": 29,
-          "signal": "B46_L7_N",
-          "package_pin": "F13",
-          "manual_page": 41
+          "connector": "J15",
+          "pin": 26,
+          "signal": "B44_L10_P",
+          "package_pin": "Y14",
+          "manual_page": 42
         },
         {
           "index": 3,
-          "connector": "J16",
-          "pin": 30,
-          "signal": "B46_L7_P",
-          "package_pin": "G13",
-          "manual_page": 41
+          "connector": "J15",
+          "pin": 28,
+          "signal": "B44_L2_P",
+          "package_pin": "AG14",
+          "manual_page": 42
         },
         {
           "index": 4,
-          "connector": "J16",
-          "pin": 31,
-          "signal": "B46_L9_N",
-          "package_pin": "G14",
-          "manual_page": 41
+          "connector": "J15",
+          "pin": 30,
+          "signal": "B43_L8_P",
+          "package_pin": "AB11",
+          "manual_page": 42
         },
         {
           "index": 5,
-          "connector": "J16",
+          "connector": "J15",
           "pin": 32,
-          "signal": "B46_L9_P",
-          "package_pin": "G15",
-          "manual_page": 41
+          "signal": "B43_L7_P",
+          "package_pin": "AD11",
+          "manual_page": 42
         }
       ]
     },
@@ -595,14 +595,14 @@
       "role": "edram_read_data",
       "iostandard": "LVCMOS33",
       "package_pins": [
-        "AG11",
-        "AF11",
-        "AB14",
-        "AB15",
-        "W13",
-        "W14",
-        "W11",
-        "W12"
+        "F11",
+        "E13",
+        "A13",
+        "A14",
+        "C13",
+        "L13",
+        "H12",
+        "J14"
       ],
       "xdc_ports": [
         "edram_p_i[0]",
@@ -618,67 +618,67 @@
       "board_pins": [
         {
           "index": 0,
-          "connector": "J15",
-          "pin": 3,
-          "signal": "B43_L2_N",
-          "package_pin": "AG11",
-          "manual_page": 42
+          "connector": "J16",
+          "pin": 11,
+          "signal": "B45_L6_N",
+          "package_pin": "F11",
+          "manual_page": 41
         },
         {
           "index": 1,
-          "connector": "J15",
-          "pin": 4,
-          "signal": "B43_L2_P",
-          "package_pin": "AF11",
-          "manual_page": 42
+          "connector": "J16",
+          "pin": 13,
+          "signal": "B46_L6_N",
+          "package_pin": "E13",
+          "manual_page": 41
         },
         {
           "index": 2,
-          "connector": "J15",
-          "pin": 5,
-          "signal": "B44_L8_N",
-          "package_pin": "AB14",
-          "manual_page": 42
+          "connector": "J16",
+          "pin": 15,
+          "signal": "B46_L3_N",
+          "package_pin": "A13",
+          "manual_page": 41
         },
         {
           "index": 3,
-          "connector": "J15",
-          "pin": 6,
-          "signal": "B44_L8_P",
-          "package_pin": "AB15",
-          "manual_page": 42
+          "connector": "J16",
+          "pin": 17,
+          "signal": "B46_L2_N",
+          "package_pin": "A14",
+          "manual_page": 41
         },
         {
           "index": 4,
-          "connector": "J15",
-          "pin": 7,
-          "signal": "B44_L9_N",
-          "package_pin": "W13",
-          "manual_page": 42
+          "connector": "J16",
+          "pin": 19,
+          "signal": "B46_L4_N",
+          "package_pin": "C13",
+          "manual_page": 41
         },
         {
           "index": 5,
-          "connector": "J15",
-          "pin": 8,
-          "signal": "B44_L9_P",
-          "package_pin": "W14",
-          "manual_page": 42
+          "connector": "J16",
+          "pin": 21,
+          "signal": "B46_L12_N",
+          "package_pin": "L13",
+          "manual_page": 41
         },
         {
           "index": 6,
-          "connector": "J15",
-          "pin": 9,
-          "signal": "B44_L11_N",
-          "package_pin": "W11",
-          "manual_page": 42
+          "connector": "J16",
+          "pin": 23,
+          "signal": "B45_L4_N",
+          "package_pin": "H12",
+          "manual_page": 41
         },
         {
           "index": 7,
-          "connector": "J15",
-          "pin": 10,
-          "signal": "B44_L11_P",
-          "package_pin": "W12",
-          "manual_page": 42
+          "connector": "J16",
+          "pin": 25,
+          "signal": "B46_L11_N",
+          "package_pin": "J14",
+          "manual_page": 41
         }
       ]
     }
